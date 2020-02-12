@@ -79,51 +79,18 @@ private:
     std::string  weights_file = "yolov3-tiny.weights";
     float const thresh = 0.2;
     std::string filename = "druha_jazda.svo";
+    sl::Camera zed; // ZED-camera
 
     ros::Publisher m_signalPublisher;
     ros::Publisher m_conePublisher;
     ros::Publisher m_carStatePublisher;
+
     float getMedian(std::vector<float> &v);
     std::vector<bbox_t> get_3d_coordinates(std::vector<bbox_t> bbox_vect, cv::Mat xyzrgba);
     cv::Mat slMat2cvMat(sl::Mat &input);
     cv::Mat zed_capture_rgb(sl::Camera &zed);
     cv::Mat zed_capture_3d(sl::Camera &zed);
-    void draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps, int current_cap_fps);
     void show_console_result(std::vector<bbox_t> const result_vec, std::vector<std::string> const obj_names, int frame_id);
+    void draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps, int current_cap_fps);
     std::vector<std::string> objects_names_from_file(std::string const filename);
-    int predictWithVideo();
 };
-
-template<typename T>
-class send_one_replaceable_object_t {
-    const bool sync;
-    std::atomic<T *> a_ptr;
-public:
-
-    void send(T const& _obj) {
-        T *new_ptr = new T;
-        *new_ptr = _obj;
-        if (sync) {
-            while (a_ptr.load()) std::this_thread::sleep_for(std::chrono::milliseconds(3));
-        }
-        std::unique_ptr<T> old_ptr(a_ptr.exchange(new_ptr));
-    }
-
-    T receive() {
-        std::unique_ptr<T> ptr;
-        do {
-            while(!a_ptr.load()) std::this_thread::sleep_for(std::chrono::milliseconds(3));
-            ptr.reset(a_ptr.exchange(NULL));
-        } while (!ptr);
-        T obj = *ptr;
-        return obj;
-    }
-
-    bool is_object_present() {
-        return (a_ptr.load() != NULL);
-    }
-
-    send_one_replaceable_object_t(bool _sync) : sync(_sync), a_ptr(NULL)
-    {}
-};
-

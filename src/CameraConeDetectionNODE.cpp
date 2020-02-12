@@ -14,7 +14,6 @@ int main(int argc, char** argv)
     ros::Publisher carStatePublisher = handle.advertise<sgtdv_msgs::CarState>("camera_pose", 1);
     cameraConeDetection.SetcarStatePublisher(carStatePublisher);
 
-
     cameraConeDetection.SetConePublisher(conePublisher);
     cameraConeDetection.SetSignalPublisher(signalPublisher);
 
