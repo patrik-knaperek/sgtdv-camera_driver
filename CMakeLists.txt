@@ -13,6 +13,12 @@ find_package(catkin REQUIRED COMPONENTS
   sgtdv_msgs
 )
 
+find_package(OpenCV REQUIRED)
+
+message(STATUS "OpenCV library status:")
+message(STATUS "    version: ${OpenCV_VERSION}")
+message(STATUS "    libraries: ${OpenCV_LIBS}")
+message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
@@ -106,6 +112,7 @@ catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES camera_cone_detection
 #  CATKIN_DEPENDS rospy
+  CATKIN_DEPENDS sgtdv_msgs
 #  DEPENDS system_lib
 )
 
@@ -117,6 +124,9 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
+  ${OpenCV_INCLUDE_DIRS}
+  /usr/local/cuda-10.1/include # include cuda 10.1
+  /usr/local/zed/include # include ZED camera SDK
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -147,7 +157,14 @@ add_executable(${PROJECT_NAME} src/CameraConeDetectionNODE.cpp src/CameraConeDet
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(camera_cone_detection
+target_link_libraries(
+    camera_cone_detection
+    ${OpenCV_LIBS}
+    /usr/local/zed/lib/libsl_core.so
+    /usr/local/zed/lib/libsl_input.so
+    /usr/local/zed/lib/libsl_svo.so
+    /usr/local/zed/lib/libsl_zed.so
+    /media/matus/Swap/ros_implementation/src/camera_cone_detection/include/libdarknet.so #treba zmenit na aktualnu cestu
 	${catkin_LIBRARIES}
 )
 
