@@ -313,7 +313,7 @@ void CameraConeDetection::Do()
         auto finish = std::chrono::steady_clock::now();
         auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count() / 1000.f;
         float timeDiff = TIME_PER_FRAME - timePerFrame;
-        std::cout << "timeDiff: " <<  timeDiff << " timePerFrame: " << 1/timePerFrame << std::endl;
+
         if (timeDiff > 0.f)
         {
             sleep(timeDiff);
@@ -321,8 +321,6 @@ void CameraConeDetection::Do()
         else
         {
             //defenzivne programovanie ftw
-            std::cout << "defenzivne programovanie ftw" << std::endl;
         }
     }
-
 }
