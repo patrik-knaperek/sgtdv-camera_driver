@@ -1,3 +1,8 @@
+/*****************************************************/
+//Organization: Stuba Green Team
+//Authors: Matúš Tomšík, Juraj Krasňanský
+/*****************************************************/
+
 #include <ros/ros.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/String.h>

@@ -1,3 +1,9 @@
+/*****************************************************/
+//Organization: Stuba Green Team
+//Authors: Matúš Tomšík, Juraj Krasňanský
+/*****************************************************/
+
+
 #include "../include/CameraConeDetection.h"
 
 //#define CARSTATE

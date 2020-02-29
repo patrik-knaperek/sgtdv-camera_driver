@@ -1,3 +1,8 @@
+/*****************************************************/
+//Organization: Stuba Green Team
+//Authors: Juraj Krasňanský
+/*****************************************************/
+
 #include <ros/ros.h>
 #include "../include/CameraConeDetection.h"
 
