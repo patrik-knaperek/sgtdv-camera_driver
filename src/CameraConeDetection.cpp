@@ -5,10 +5,7 @@
 
 
 #include "../include/CameraConeDetection.h"
-
-//#define CARSTATE
-//#define CAMERA_SHOW
-//#define CONSOLE_SHOW
+#include "../../SGT_Macros.h"
 
 CameraConeDetection::CameraConeDetection()
 {
@@ -37,7 +34,8 @@ void CameraConeDetection::SetcarStatePublisher(ros::Publisher carStatePublisher)
 {
     m_carStatePublisher = carStatePublisher;
 }
-#ifdef CAMERA_SHOW
+
+#ifdef CAMERA_DETECTION_CAMERA_SHOW
 void CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps = -1, int current_cap_fps = -1) {
     for (auto &i : result_vec) {
         cv::Scalar color = { 0,0,255 };
@@ -79,7 +77,7 @@ void CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result
     cv::imshow("window name", mat_img);
     cv::waitKey(3);
 }
-#endif //CAMERA_SHOW
+#endif //CAMERA_DETECTION_CAMERA_SHOW
 
 std::vector<std::string> CameraConeDetection::objects_names_from_file(std::string const filename) {
 	std::ifstream file(filename);
@@ -90,7 +88,7 @@ std::vector<std::string> CameraConeDetection::objects_names_from_file(std::strin
 	return file_lines;
 }
 
-#ifdef CONSOLE_SHOW
+#ifdef CAMERA_DETECTION_CONSOLE_SHOW
     void CameraConeDetection::show_console_result(std::vector<bbox_t> const result_vec, std::vector<std::string> const obj_names, int frame_id = -1) {
         if (frame_id >= 0) std::cout << " Frame: " << frame_id << std::endl;
         for (auto &i : result_vec) {
@@ -100,7 +98,7 @@ std::vector<std::string> CameraConeDetection::objects_names_from_file(std::strin
                 << std::setprecision(3) << ", prob = " << i.prob << std::endl;
         }
     }
-#endif //CONSOLE_SHOW
+#endif //CAMERA_DETECTION_CONSOLE_SHOW
 float CameraConeDetection::getMedian(std::vector<float> &v) {
     size_t n = v.size() / 2;
     std::nth_element(v.begin(), v.begin() + n, v.end());
@@ -169,34 +167,34 @@ cv::Mat CameraConeDetection::slMat2cvMat(sl::Mat &input) {
     // Mapping between MAT_TYPE and CV_TYPE
     int cv_type = -1;
     switch (input.getDataType()) {
-    case sl::MAT_TYPE_32F_C1:
+    case sl::MAT_TYPE::F32_C1:
         cv_type = CV_32FC1;
         break;
-    case sl::MAT_TYPE_32F_C2:
+    case sl::MAT_TYPE::F32_C2:
         cv_type = CV_32FC2;
         break;
-    case sl::MAT_TYPE_32F_C3:
+    case sl::MAT_TYPE::F32_C3:
         cv_type = CV_32FC3;
         break;
-    case sl::MAT_TYPE_32F_C4:
+    case sl::MAT_TYPE::F32_C4:
         cv_type = CV_32FC4;
         break;
-    case sl::MAT_TYPE_8U_C1:
+    case sl::MAT_TYPE::U8_C1:
         cv_type = CV_8UC1;
         break;
-    case sl::MAT_TYPE_8U_C2:
+    case sl::MAT_TYPE::U8_C2:
         cv_type = CV_8UC2;
         break;
-    case sl::MAT_TYPE_8U_C3:
+    case sl::MAT_TYPE::U8_C3:
         cv_type = CV_8UC3;
         break;
-    case sl::MAT_TYPE_8U_C4:
+    case sl::MAT_TYPE::U8_C4:
         cv_type = CV_8UC4;
         break;
     default:
         break;
     }
-    return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(sl::MEM_CPU));
+    return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(sl::MEM::CPU));
 }
 
 cv::Mat CameraConeDetection::zed_capture_rgb(sl::Camera &zed) {
@@ -209,7 +207,7 @@ cv::Mat CameraConeDetection::zed_capture_rgb(sl::Camera &zed) {
 
 cv::Mat CameraConeDetection::zed_capture_3d(sl::Camera &zed) {
     sl::Mat cur_cloud;
-    zed.retrieveMeasure(cur_cloud, sl::MEASURE_XYZ);
+    zed.retrieveMeasure(cur_cloud, sl::MEASURE::XYZ);
     return slMat2cvMat(cur_cloud).clone();
 }
 
@@ -217,7 +215,9 @@ cv::Mat CameraConeDetection::zed_capture_3d(sl::Camera &zed) {
 void CameraConeDetection::Do()
 {
     Detector detector(cfg_file, weights_file); //Darknet
-    auto obj_names = objects_names_from_file(names_file);
+//    auto obj_names = objects_names_from_file(names_file);
+
+    std::vector<std::string> obj_names = {"yellow_cone", "blue_cone", "orange_cone_small", "orange_cone_big"};
 
     std::string const file_ext = filename.substr(filename.find_last_of(".") + 1);
     std::string const protocol = filename.substr(0, 7);
@@ -225,15 +225,15 @@ void CameraConeDetection::Do()
     // init zed camera
     sl::InitParameters init_params;
     init_params.depth_minimum_distance = 0.5;
-    init_params.depth_mode = sl::DEPTH_MODE_ULTRA;
-    init_params.camera_resolution = sl::RESOLUTION_HD720;// sl::RESOLUTION_HD1080, sl::RESOLUTION_HD720
-    init_params.coordinate_units = sl::UNIT_MILLIMETER;
-    init_params.coordinate_system = sl::COORDINATE_SYSTEM_RIGHT_HANDED_Z_UP;
+    init_params.depth_mode = sl::DEPTH_MODE::ULTRA;
+    init_params.camera_resolution = sl::RESOLUTION::HD720;// sl::RESOLUTION::HD1080, sl::RESOLUTION::HD720
+    init_params.coordinate_units = sl::UNIT::MILLIMETER;
+    init_params.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;  /**< Right-Handed with Z pointing up and X forward. Used in ROS (REP 103). */
     init_params.sdk_cuda_ctx = (CUcontext)detector.get_cuda_context();//ak to bude nadavat na CUDNN tak treba zakomentova/odkomentovat
     init_params.sdk_gpu_id = detector.cur_gpu_id;
-    init_params.camera_buffer_count_linux = 2;
+    //init_params.camera_buffer_count_linux = 2;
 
-    if (file_ext == "svo") init_params.svo_input_filename.set(filename.c_str());
+    if (file_ext == "svo") init_params.input.setFromSVOFile(filename.c_str());
 
     zed.open(init_params);
     if (!zed.isOpened()) {
@@ -249,19 +249,19 @@ void CameraConeDetection::Do()
 
     std_msgs::Empty empty;
 
-#ifdef CARSTATE
+#ifdef CAMERA_DETECTION_CARSTATE
     // Set parameters for Positional Tracking
     zed.enableTracking();
     sl::Pose camera_path;
     sl::TRACKING_STATE tracking_state;
-#endif// CARSTATE
+#endif// CAMERA_DETECTION_CARSTATE
 
     while (ros::ok())
     {
         auto start = std::chrono::steady_clock::now();
 
         //TODO function body
-        if (zed.grab() == sl::SUCCESS){
+        if (zed.grab() == sl::ERROR_CODE::SUCCESS){
             cur_frame = zed_capture_rgb(zed);
             zed_cloud = zed_capture_3d(zed);
             if (cur_frame.empty() ) {
@@ -284,18 +284,22 @@ void CameraConeDetection::Do()
                 cone.coords = point2D;
 
                 std::string obj_name = obj_names[i.obj_id];
-                if (i.obj_id==0)
+                if (i.obj_id==0) //yellow_cone
                     cone.color= 'y';
-                if (i.obj_id==1)
+                if (i.obj_id==1) //blue_cone
                     cone.color= 'b';
+                if (i.obj_id==2) //orange_cone_small
+                    cone.color= 's';
+                if (i.obj_id==3) //orange_cone_big
+                    cone.color= 'g';
                 coneArr.cones.push_back(cone);
             }
             m_conePublisher.publish(coneArr);
 
-#ifdef CARSTATE
+#ifdef CAMERA_DETECTION_CARSTATE
             sgtdv_msgs::CarState carState;
             sgtdv_msgs::Point2D carPoint2D;
-            tracking_state = zed.getPosition(camera_path, sl::REFERENCE_FRAME_WORLD); //get actual position
+            tracking_state = zed.getPosition(camera_path, sl::REFERENCE_FRAME::WORLD); //get actual position
             //std::cout << "Camera position: X=" << camera_path.getTranslation().x << " Y=" << camera_path.getTranslation().y << " Z=" << camera_path.getTranslation().z << std::endl;
             //std::cout << "Camera Euler rotation: X=" << camera_path.getEulerAngles().x << " Y=" << camera_path.getEulerAngles().y << " Z=" << camera_path.getEulerAngles().z << std::endl;
             carPoint2D.x = camera_path.getTranslation().x;
@@ -304,15 +308,15 @@ void CameraConeDetection::Do()
             carState.yaw = camera_path.getEulerAngles().z;
 
             m_carStatePublisher.publish(carState);
-#endif//CARSTATE
+#endif//CAMERA_DETECTION_CARSTATE
 
 
-#ifdef CAMERA_SHOW
+#ifdef CAMERA_DETECTION_CAMERA_SHOW
             draw_boxes(cur_frame, result_vec, obj_names);
-#endif //CAMERA_SHOW
-#ifdef CONSOLE_SHOW
+#endif //CAMERA_DETECTION_CAMERA_SHOW
+#ifdef CAMERA_DETECTION_CONSOLE_SHOW
             show_console_result(result_vec, obj_names);
-#endif //CONSOLE_SHOW
+#endif //CAMERA_DETECTION_CONSOLE_SHOW
          }
         /******************************************************************/
 

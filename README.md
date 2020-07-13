@@ -15,7 +15,7 @@ v CMakeLists treba zmenit
 include_directories(
 # include
   ${OpenCV_INCLUDE_DIRS}
-  /usr/local/cuda-10.1/include # include cuda 10.1
+  /usr/local/cuda-10.0/include # include cuda 10.0
   /usr/local/zed/include # include ZED camera SDK
   ${catkin_INCLUDE_DIRS}
 )
@@ -30,7 +30,7 @@ target_link_libraries(camera_cone_detection
     /usr/local/zed/lib/libsl_input.so
     /usr/local/zed/lib/libsl_svo.so
     /usr/local/zed/lib/libsl_zed.so
-    /media/matus/Swap/ros_implementation/src/camera_cone_detection/include/libdarknet.so #treba zmenit na aktualnu cestu
+    /usr/src/ROS_implementation/darknet/libdarknet.so #treba zmenit na aktualnu cestu
 	${catkin_LIBRARIES}
 )
 
@@ -43,4 +43,4 @@ nasledne spustit sa da v ```ros_implementation/devel/lib/camera_cone_detection``
 ```./camera_cone_detection``` musi mat pri sebe **kuzel.names**, **yolov3-tiny.cfg**, **yolov3-tiny.weights**, **druha_jazda.svo** alebo to treba zmenit v ```CameraConeDetection.h``` ak ```filename``` zadame ako **"zed_camera"** tak by sa malo brat obraz z kamery
 
 pre citanie ros sprav sa musi spustit
-```. /media/matus/Swap/ros_implementation/devel/setup.bash ``` v ros_implementation priecinku a nasledne **rostopic echo nazov_spravy**
+```. ros_implementation/devel/setup.bash ``` v ros_implementation priecinku a nasledne **rostopic echo nazov_spravy**
