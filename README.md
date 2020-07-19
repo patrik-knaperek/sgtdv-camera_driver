@@ -3,14 +3,14 @@
 ### Requirements
 
 * Linux
-* **CUDA 10.1**
+* **CUDA 10.0**
 * **OpenCV >= 4.0.1**
-* **ZED SDK 2.8**: pri verzii 3.0 sa zmenili nazvy makier v ZED SDK treba upravit kod podla nich
+* **ZED SDK 3.X**:
 
 
 #Implementacia detekcie cez karemu v c++
 
-v CMakeLists treba zmenit 
+v CMakeLists treba zmenit aktualnu verziu CUDA
 ```
 include_directories(
 # include
@@ -21,14 +21,15 @@ include_directories(
 )
 
 ```
- na aktualnu verziu lib darknetu
+ a aktualnu cestu k lib darknetu
 
 ```
-target_link_libraries(camera_cone_detection
+target_link_libraries(
+    camera_cone_detection
     ${OpenCV_LIBS}
-    /usr/local/zed/lib/libsl_core.so
-    /usr/local/zed/lib/libsl_input.so
-    /usr/local/zed/lib/libsl_svo.so
+#    /usr/local/zed/lib/libsl_core.so
+#    /usr/local/zed/lib/libsl_input.so
+#    /usr/local/zed/lib/libsl_svo.so
     /usr/local/zed/lib/libsl_zed.so
     /usr/src/ROS_implementation/darknet/libdarknet.so #treba zmenit na aktualnu cestu
 	${catkin_LIBRARIES}
