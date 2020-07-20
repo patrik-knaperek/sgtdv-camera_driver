@@ -14,10 +14,17 @@ CameraConeDetection::CameraConeDetection()
 
 CameraConeDetection::~CameraConeDetection()
 {
+#ifdef CAMERA_DETECTION_RECORD_VIDEO_SVO
+    zed.disableRecording();
+#endif// CAMERA_DETECTION_RECORD_VIDEO_SVO
+
     if (zed.isOpened()) {
         zed.close();
         std::cout << "zed camera closed" << std::endl;
     }
+#ifdef CAMERA_DETECTION_RECORD_VIDEO
+    output_video.release();
+#endif //CAMERA_DETECTION_RECORD_VIDEO
 }
 
 void CameraConeDetection::SetSignalPublisher(ros::Publisher signalPublisher)
@@ -36,7 +43,7 @@ void CameraConeDetection::SetcarStatePublisher(ros::Publisher carStatePublisher)
 }
 
 #ifdef CAMERA_DETECTION_CAMERA_SHOW
-void CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps = -1, int current_cap_fps = -1) {
+cv::Mat CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps = -1, int current_cap_fps = -1) {
     for (auto &i : result_vec) {
         cv::Scalar color = { 0,0,255 };
         if (i.obj_id == 0){
@@ -76,6 +83,7 @@ void CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result
 
     cv::imshow("window name", mat_img);
     cv::waitKey(3);
+    return mat_img;
 }
 #endif //CAMERA_DETECTION_CAMERA_SHOW
 
@@ -217,10 +225,15 @@ void CameraConeDetection::Do()
     Detector detector(cfg_file, weights_file); //Darknet
 //    auto obj_names = objects_names_from_file(names_file);
 
-    std::vector<std::string> obj_names = {"yellow_cone", "blue_cone", "orange_cone_small", "orange_cone_big"};
-
     std::string const file_ext = filename.substr(filename.find_last_of(".") + 1);
     std::string const protocol = filename.substr(0, 7);
+
+    // get ZED SDK version
+    int major_dll, minor_dll, patch_dll;
+    getZEDSDKBuildVersion(major_dll, minor_dll, patch_dll);
+    if (major_dll < 3){
+        std::cerr << "SUPPORT ONLY SDK 3.*" << std::endl;
+    }
 
     // init zed camera
     sl::InitParameters init_params;
@@ -242,84 +255,41 @@ void CameraConeDetection::Do()
         return;
     }
 
+    // Check camera model
+    sl::MODEL cam_model = zed.getCameraInformation().camera_model;
+
+    zed.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO, 1);
+
+#ifdef CAMERA_DETECTION_RECORD_VIDEO_SVO
+    sl::ERROR_CODE err;
+    err = zed.enableRecording(sl::RecordingParameters("myVideoFile.svo", sl::SVO_COMPRESSION_MODE::H264));
+    if (err != sl::ERROR_CODE::SUCCESS) {
+        std::cout <<"CAMERA_DETECTION_RECORD_VIDEO_SVO: " <<  sl::toString(err) << std::endl;
+    }
+#endif// CAMERA_DETECTION_RECORD_VIDEO_SVO
+
     if (filename.size() == 0) return;
-
-    cv::Mat cur_frame;
-    cv::Mat zed_cloud;
-
-    std_msgs::Empty empty;
 
 #ifdef CAMERA_DETECTION_CARSTATE
     // Set parameters for Positional Tracking
-    zed.enableTracking();
+    sl::PositionalTrackingParameters tracking_parameters;
+    zed.enablePositionalTracking(tracking_parameters);
     sl::Pose camera_path;
-    sl::TRACKING_STATE tracking_state;
+    sl::POSITIONAL_TRACKING_STATE tracking_state;
 #endif// CAMERA_DETECTION_CARSTATE
+
+#ifdef CAMERA_DETECTION_RECORD_VIDEO
+    #ifdef CV_VERSION_EPOCH // OpenCV 2.x
+        output_video.open(out_videofile, CV_FOURCC('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
+    #else
+        output_video.open(out_videofile, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
+    #endif
+#endif//CAMERA_DETECTION_RECORD_VIDEO
 
     while (ros::ok())
     {
         auto start = std::chrono::steady_clock::now();
-
-        //TODO function body
-        if (zed.grab() == sl::ERROR_CODE::SUCCESS){
-            cur_frame = zed_capture_rgb(zed);
-            zed_cloud = zed_capture_3d(zed);
-            if (cur_frame.empty() ) {
-                std::cout << " exit_flag: detection_data.cap_frame.size = " << cur_frame.size() << std::endl;
-                cur_frame = cv::Mat(cur_frame.size(), CV_8UC3);
-            }
-
-            //sync with LidarConeDetection
-            m_signalPublisher.publish(empty);
-
-            std::vector<bbox_t> result_vec = detector.detect(cur_frame, thresh);
-            result_vec = get_3d_coordinates(result_vec, zed_cloud);
-
-            sgtdv_msgs::ConeArr coneArr;
-            sgtdv_msgs::Cone cone;
-            sgtdv_msgs::Point2D point2D;
-            for (auto &i : result_vec) {
-                point2D.x = i.x_3d;
-                point2D.y = i.y_3d;
-                cone.coords = point2D;
-
-                std::string obj_name = obj_names[i.obj_id];
-                if (i.obj_id==0) //yellow_cone
-                    cone.color= 'y';
-                if (i.obj_id==1) //blue_cone
-                    cone.color= 'b';
-                if (i.obj_id==2) //orange_cone_small
-                    cone.color= 's';
-                if (i.obj_id==3) //orange_cone_big
-                    cone.color= 'g';
-                coneArr.cones.push_back(cone);
-            }
-            m_conePublisher.publish(coneArr);
-
-#ifdef CAMERA_DETECTION_CARSTATE
-            sgtdv_msgs::CarState carState;
-            sgtdv_msgs::Point2D carPoint2D;
-            tracking_state = zed.getPosition(camera_path, sl::REFERENCE_FRAME::WORLD); //get actual position
-            //std::cout << "Camera position: X=" << camera_path.getTranslation().x << " Y=" << camera_path.getTranslation().y << " Z=" << camera_path.getTranslation().z << std::endl;
-            //std::cout << "Camera Euler rotation: X=" << camera_path.getEulerAngles().x << " Y=" << camera_path.getEulerAngles().y << " Z=" << camera_path.getEulerAngles().z << std::endl;
-            carPoint2D.x = camera_path.getTranslation().x;
-            carPoint2D.y = camera_path.getTranslation().y;
-            carState.position = carPoint2D;
-            carState.yaw = camera_path.getEulerAngles().z;
-
-            m_carStatePublisher.publish(carState);
-#endif//CAMERA_DETECTION_CARSTATE
-
-
-#ifdef CAMERA_DETECTION_CAMERA_SHOW
-            draw_boxes(cur_frame, result_vec, obj_names);
-#endif //CAMERA_DETECTION_CAMERA_SHOW
-#ifdef CAMERA_DETECTION_CONSOLE_SHOW
-            show_console_result(result_vec, obj_names);
-#endif //CAMERA_DETECTION_CONSOLE_SHOW
-         }
-        /******************************************************************/
-
+        predict(detector, cam_model);
         auto finish = std::chrono::steady_clock::now();
         auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count() / 1000.f;
         float timeDiff = TIME_PER_FRAME - timePerFrame;
@@ -327,10 +297,108 @@ void CameraConeDetection::Do()
         if (timeDiff > 0.f)
         {
             sleep(timeDiff);
+            std::cout <<"Sleeping time: "<< timeDiff << std::endl;
         }
         else
         {
             //defenzivne programovanie ftw
         }
     }
+}
+
+void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
+    std::vector<std::string> obj_names = {"yellow_cone", "blue_cone", "orange_cone_small", "orange_cone_big"};
+
+    cv::Mat cur_frame;
+    cv::Mat zed_cloud;
+
+    std_msgs::Empty empty;
+
+    sl::SensorsData data;
+
+#ifdef CAMERA_DETECTION_CARSTATE
+    // Set parameters for Positional Tracking
+    sl::Pose camera_path;
+    sl::POSITIONAL_TRACKING_STATE tracking_state;
+#endif// CAMERA_DETECTION_CARSTATE
+
+    //TODO function body
+    if (zed.grab() == sl::ERROR_CODE::SUCCESS){
+        cur_frame = zed_capture_rgb(zed);
+        zed_cloud = zed_capture_3d(zed);
+        if (cur_frame.empty() ) {
+            std::cout << " exit_flag: detection_data.cap_frame.size = " << cur_frame.size() << std::endl;
+            cur_frame = cv::Mat(cur_frame.size(), CV_8UC3);
+        }
+
+        //sync with LidarConeDetection
+        m_signalPublisher.publish(empty);
+
+        std::vector<bbox_t> result_vec = detector.detect(cur_frame, thresh);
+        result_vec = get_3d_coordinates(result_vec, zed_cloud);
+
+        sgtdv_msgs::ConeArr coneArr;
+        sgtdv_msgs::Cone cone;
+        sgtdv_msgs::Point2D point2D;
+        for (auto &i : result_vec) {
+            point2D.x = i.x_3d;
+            point2D.y = i.y_3d;
+            cone.coords = point2D;
+
+            std::string obj_name = obj_names[i.obj_id];
+            if (i.obj_id==0) //yellow_cone
+                cone.color= 'y';
+            if (i.obj_id==1) //blue_cone
+                cone.color= 'b';
+            if (i.obj_id==2) //orange_cone_small
+                cone.color= 's';
+            if (i.obj_id==3) //orange_cone_big
+                cone.color= 'g';
+            coneArr.cones.push_back(cone);
+        }
+        m_conePublisher.publish(coneArr);
+
+#ifdef CAMERA_DETECTION_CARSTATE
+        sgtdv_msgs::CarState carState;
+        sgtdv_msgs::Point2D carPoint2D;
+        tracking_state = zed.getPosition(camera_path, sl::REFERENCE_FRAME::WORLD); //get actual position
+        //std::cout << "Camera position: X=" << camera_path.getTranslation().x << " Y=" << camera_path.getTranslation().y << " Z=" << camera_path.getTranslation().z << std::endl;
+        //std::cout << "Camera Euler rotation: X=" << camera_path.getEulerAngles().x << " Y=" << camera_path.getEulerAngles().y << " Z=" << camera_path.getEulerAngles().z << std::endl;
+        carPoint2D.x = camera_path.getTranslation().x;
+        carPoint2D.y = camera_path.getTranslation().y;
+        carState.position = carPoint2D;
+        carState.yaw = camera_path.getEulerAngles().z;
+
+        m_carStatePublisher.publish(carState);
+#endif//CAMERA_DETECTION_CARSTATE
+
+        if (cam_model == sl::MODEL::ZED2) {
+            if (zed.getSensorsData(data, sl::TIME_REFERENCE::CURRENT) == sl::ERROR_CODE::SUCCESS) {
+                // Filtered orientation quaternion
+                std::cout << "IMU Orientation x: " << data.imu.pose.getOrientation().ox << "y: " << data.imu.pose.getOrientation().oy <<
+                "z: " << data.imu.pose.getOrientation().oz << "w: " << data.imu.pose.getOrientation().ow << std::endl;
+
+                // Filtered acceleration
+                std::cout << "IMU Acceleration [m/sec^2] x: " << data.imu.linear_acceleration.x << "y: " << data.imu.linear_acceleration.y <<
+                            "z: " << data.imu.linear_acceleration.z << std::endl;
+
+                // Filtered angular velocities
+                std::cout << "IMU angular velocities [deg/sec] x: " << data.imu.angular_velocity.x << "y: " << data.imu.angular_velocity.y <<
+                            "z: " << data.imu.angular_velocity.z << std::endl;
+            }
+        }
+
+
+#ifdef CAMERA_DETECTION_CAMERA_SHOW
+        draw_boxes(cur_frame, result_vec, obj_names);
+#endif //CAMERA_DETECTION_CAMERA_SHOW
+#ifdef CAMERA_DETECTION_RECORD_VIDEO
+        //video.write(cur_frame);
+        output_video << cur_frame;
+        //video.write(draw_boxes(cur_frame, result_vec, obj_names));
+#endif//CAMERA_DETECTION_RECORD_VIDEO
+#ifdef CAMERA_DETECTION_CONSOLE_SHOW
+        show_console_result(result_vec, obj_names);
+#endif //CAMERA_DETECTION_CONSOLE_SHOW
+     }
 }
