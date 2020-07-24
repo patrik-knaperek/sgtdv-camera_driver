@@ -125,7 +125,7 @@ catkin_package(
 include_directories(
 # include
   ${OpenCV_INCLUDE_DIRS}
-  /usr/local/cuda-10.1/include # include cuda 10.1
+  /usr/local/cuda-10.0/include # include cuda 10.0
   /usr/local/zed/include # include ZED camera SDK
   ${catkin_INCLUDE_DIRS}
 )
@@ -160,11 +160,11 @@ add_executable(${PROJECT_NAME} src/CameraConeDetectionNODE.cpp src/CameraConeDet
 target_link_libraries(
     camera_cone_detection
     ${OpenCV_LIBS}
-    /usr/local/zed/lib/libsl_core.so
-    /usr/local/zed/lib/libsl_input.so
-    /usr/local/zed/lib/libsl_svo.so
+#    /usr/local/zed/lib/libsl_core.so
+#    /usr/local/zed/lib/libsl_input.so
+#    /usr/local/zed/lib/libsl_svo.so
     /usr/local/zed/lib/libsl_zed.so
-    /media/matus/Swap/ros_implementation/src/camera_cone_detection/include/libdarknet.so #treba zmenit na aktualnu cestu
+    /usr/src/ROS_implementation/darknet/libdarknet.so #treba zmenit na aktualnu cestu
 	${catkin_LIBRARIES}
 )
 

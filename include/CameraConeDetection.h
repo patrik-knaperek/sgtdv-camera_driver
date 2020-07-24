@@ -77,6 +77,7 @@ public:
     void SetConePublisher(ros::Publisher mainPublisher);
     void SetcarStatePublisher(ros::Publisher carStatePublisher);
     void Do();
+    void predict(Detector &detector, sl::MODEL &cam_model);
 
 private:
     std::string  names_file = "kuzel.names";
@@ -85,6 +86,9 @@ private:
     float const thresh = 0.2;
     std::string filename = "druha_jazda.svo";
     sl::Camera zed; // ZED-camera
+
+    std::string out_videofile = "result.avi";
+    cv::VideoWriter output_video;
 
     ros::Publisher m_signalPublisher;
     ros::Publisher m_conePublisher;
@@ -96,6 +100,6 @@ private:
     cv::Mat zed_capture_rgb(sl::Camera &zed);
     cv::Mat zed_capture_3d(sl::Camera &zed);
     void show_console_result(std::vector<bbox_t> const result_vec, std::vector<std::string> const obj_names, int frame_id);
-    void draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps, int current_cap_fps);
+    cv::Mat draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps, int current_cap_fps);
     std::vector<std::string> objects_names_from_file(std::string const filename);
 };
