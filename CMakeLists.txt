@@ -22,6 +22,21 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
+find_package(ZED 3 REQUIRED)
+message(STATUS "ZED library status:")
+message(STATUS "    version: ${ZED_VERSION}")
+message(STATUS "    libraries: ${ZED_LIBRARIES}")
+message(STATUS "    libraries path: ${ZED_LIBRARY_DIR}")
+message(STATUS "    include path: ${ZED_INCLUDE_DIRS}")
+
+SET(VERSION_REQ_CUDA "10.0")
+
+find_package(CUDA ${VERSION_REQ_CUDA} REQUIRED)
+message(STATUS "CUDA library status:")
+message(STATUS "    version: ${CUDA_VERSION}")
+message(STATUS "    libraries: ${CUDA_LIBRARIES}")
+message(STATUS "    libraries path: ${CUDA_LIBRARY_DIR}")
+message(STATUS "    include path: ${CUDA_INCLUDE_DIRS}")
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -125,8 +140,8 @@ catkin_package(
 include_directories(
 # include
   ${OpenCV_INCLUDE_DIRS}
-  /usr/local/cuda-10.0/include # include cuda 10.0
-  /usr/local/zed/include # include ZED camera SDK
+  ${CUDA_INCLUDE_DIRS}
+  ${ZED_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
 )
 
@@ -160,12 +175,9 @@ add_executable(${PROJECT_NAME} src/CameraConeDetectionNODE.cpp src/CameraConeDet
 target_link_libraries(
     camera_cone_detection
     ${OpenCV_LIBS}
-#    /usr/local/zed/lib/libsl_core.so
-#    /usr/local/zed/lib/libsl_input.so
-#    /usr/local/zed/lib/libsl_svo.so
-    /usr/local/zed/lib/libsl_zed.so
+    ${ZED_LIBRARIES}
     /usr/src/ROS_implementation/darknet/libdarknet.so #treba zmenit na aktualnu cestu
-	${catkin_LIBRARIES}
+    ${catkin_LIBRARIES}
 )
 
 #############
