@@ -10,29 +10,15 @@
 
 #Implementacia detekcie cez karemu v c++
 
-v CMakeLists treba zmenit aktualnu verziu CUDA
-```
-include_directories(
-# include
-  ${OpenCV_INCLUDE_DIRS}
-  /usr/local/cuda-10.0/include # include cuda 10.0
-  /usr/local/zed/include # include ZED camera SDK
-  ${catkin_INCLUDE_DIRS}
-)
-
-```
- a aktualnu cestu k lib darknetu
+v CMakeLists treba zmenit aktualnu cestu k lib darknetu
 
 ```
 target_link_libraries(
     camera_cone_detection
     ${OpenCV_LIBS}
-#    /usr/local/zed/lib/libsl_core.so
-#    /usr/local/zed/lib/libsl_input.so
-#    /usr/local/zed/lib/libsl_svo.so
-    /usr/local/zed/lib/libsl_zed.so
+    ${ZED_LIBRARIES}
     /usr/src/ROS_implementation/darknet/libdarknet.so #treba zmenit na aktualnu cestu
-	${catkin_LIBRARIES}
+    ${catkin_LIBRARIES}
 )
 
 ```
