@@ -5,7 +5,6 @@
 
 
 #include "../include/CameraConeDetection.h"
-#include "../../SGT_Macros.h"
 
 CameraConeDetection::CameraConeDetection()
 {
@@ -36,11 +35,19 @@ void CameraConeDetection::SetConePublisher(ros::Publisher conePublisher)
 {
     m_conePublisher = conePublisher;
 }
+#ifdef CAMERA_DETECTION_FAKE_LIDAR
+    void CameraConeDetection::SetLidarConePublisher(ros::Publisher lidarConePublisher)
+    {
+        m_lidarConePublisher = lidarConePublisher;
+    }
+#endif//CAMERA_DETECTION_FAKE_LIDAR
 
-void CameraConeDetection::SetcarStatePublisher(ros::Publisher carStatePublisher)
+#ifdef CAMERA_DETECTION_CARSTATE
+void CameraConeDetection::SetCarStatePublisher(ros::Publisher carStatePublisher)
 {
     m_carStatePublisher = carStatePublisher;
 }
+#endif//CAMERA_DETECTION_CARSTATE
 
 #ifdef CAMERA_DETECTION_CAMERA_SHOW
 cv::Mat CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps = -1, int current_cap_fps = -1) {
@@ -340,10 +347,16 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
         sgtdv_msgs::ConeArr coneArr;
         sgtdv_msgs::Cone cone;
         sgtdv_msgs::Point2D point2D;
+        #ifdef CAMERA_DETECTION_FAKE_LIDAR
+            sgtdv_msgs::Point2DArr point2DArr;
+        #endif//CAMERA_DETECTION_FAKE_LIDAR
         for (auto &i : result_vec) {
             point2D.x = i.x_3d;
             point2D.y = i.y_3d;
             cone.coords = point2D;
+            #ifdef CAMERA_DETECTION_FAKE_LIDAR
+                point2DArr.points.push_back(point2D);
+            #endif//CAMERA_DETECTION_FAKE_LIDAR
 
             std::string obj_name = obj_names[i.obj_id];
             if (i.obj_id==0) //yellow_cone
@@ -357,6 +370,9 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
             coneArr.cones.push_back(cone);
         }
         m_conePublisher.publish(coneArr);
+        #ifdef CAMERA_DETECTION_FAKE_LIDAR
+            m_lidarConePublisher.publish(point2DArr);
+        #endif//CAMERA_DETECTION_FAKE_LIDAR
 
 #ifdef CAMERA_DETECTION_CARSTATE
         sgtdv_msgs::CarState carState;
@@ -368,6 +384,10 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
         carPoint2D.y = camera_path.getTranslation().y;
         carState.position = carPoint2D;
         carState.yaw = camera_path.getEulerAngles().z;
+
+        for (size_t i = 0; i < carState.covariance.size(); i++) {
+            carState.covariance[i] = camera_path.pose_covariance[i];
+        }
 
         m_carStatePublisher.publish(carState);
 #endif//CAMERA_DETECTION_CARSTATE
