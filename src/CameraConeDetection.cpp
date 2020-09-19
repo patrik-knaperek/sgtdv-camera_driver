@@ -248,7 +248,7 @@ void CameraConeDetection::Do()
     init_params.depth_mode = sl::DEPTH_MODE::ULTRA;
     init_params.camera_resolution = sl::RESOLUTION::HD720;// sl::RESOLUTION::HD1080, sl::RESOLUTION::HD720
     init_params.coordinate_units = sl::UNIT::MILLIMETER;
-    init_params.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;  /**< Right-Handed with Z pointing up and X forward. Used in ROS (REP 103). */
+    init_params.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;  /*< Right-Handed with Z pointing up and X forward. Used in ROS (REP 103). */
     init_params.sdk_cuda_ctx = (CUcontext)detector.get_cuda_context();//ak to bude nadavat na CUDNN tak treba zakomentova/odkomentovat
     init_params.sdk_gpu_id = detector.cur_gpu_id;
     //init_params.camera_buffer_count_linux = 2;
