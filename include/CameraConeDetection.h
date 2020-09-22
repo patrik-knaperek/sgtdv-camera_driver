@@ -84,7 +84,8 @@ private:
     std::string  cfg_file = "yolov3-tiny.cfg";
     std::string  weights_file = "yolov3-tiny.weights";
     float const thresh = 0.2;
-    std::string filename = "druha_jazda.svo";
+    //std::string filename = "druha_jazda.svo";
+    std::string filename = "zed_camera";
     sl::Camera zed; // ZED-camera
 
     std::string out_videofile = "result.avi";
