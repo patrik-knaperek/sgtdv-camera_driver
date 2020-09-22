@@ -9,7 +9,9 @@
 #include <sgtdv_msgs/ConeArr.h>
 #include <sgtdv_msgs/Cone.h>
 #include <sgtdv_msgs/Point2D.h>
+#include <sgtdv_msgs/Point2DArr.h>
 #include <sgtdv_msgs/CarState.h>
+#include "../../SGT_Macros.h"
 #include <chrono>
 
 
@@ -75,7 +77,12 @@ public:
 
     void SetSignalPublisher(ros::Publisher signalPublisher);
     void SetConePublisher(ros::Publisher mainPublisher);
-    void SetcarStatePublisher(ros::Publisher carStatePublisher);
+    #ifdef CAMERA_DETECTION_FAKE_LIDAR
+    void SetLidarConePublisher(ros::Publisher lidarConePublisher);
+    #endif//CAMERA_DETECTION_FAKE_LIDAR
+    #ifdef CAMERA_DETECTION_CARSTATE
+    void SetCarStatePublisher(ros::Publisher carStatePublisher);
+    #endif//CAMERA_DETECTION_CARSTATE
     void Do();
     void predict(Detector &detector, sl::MODEL &cam_model);
 
@@ -93,7 +100,12 @@ private:
 
     ros::Publisher m_signalPublisher;
     ros::Publisher m_conePublisher;
+    #ifdef CAMERA_DETECTION_FAKE_LIDAR
+    ros::Publisher m_lidarConePublisher;
+    #endif//CAMERA_DETECTION_FAKE_LIDAR
+    #ifdef CAMERA_DETECTION_CARSTATE
     ros::Publisher m_carStatePublisher;
+    #endif//CAMERA_DETECTION_CARSTATE
 
     float getMedian(std::vector<float> &v);
     std::vector<bbox_t> get_3d_coordinates(std::vector<bbox_t> bbox_vect, cv::Mat xyzrgba);
