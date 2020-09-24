@@ -1,15 +1,20 @@
-# ROS_implementation
+# camera_cone_detection
 
 ### Requirements
 
 * Linux
-* **CUDA 10.0**
-* **OpenCV >= 4.0.1**
-* **ZED SDK 3.X**:
-* **Darknet (https://github.com/AlexeyAB/darknet)**
+* [**CUDA 10.0**](https://developer.nvidia.com/embedded/jetpack)
+* [**OpenCV >= 4.0.1**](https://developer.nvidia.com/embedded/jetpack)
+* [**ZED SDK 3.X**](https://www.stereolabs.com/developers/release/)
+* [**Darknet**](https://github.com/AlexeyAB/darknet)  
+  * Povolit v Makefile:
+  * GPU=1
+  * CUDNN=1
+  * CUDNN_HALF=1
+  * LIBSO=1
 
 
-#Implementacia detekcie cez kameru v c++
+## Implementacia detekcie cez kameru v c++
 
 v CMakeLists treba zmenit aktualnu cestu k lib darknetu
 

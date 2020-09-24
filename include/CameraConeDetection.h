@@ -34,7 +34,9 @@
 #define OPENCV
 
 #ifdef ZED_STEREO
+
 #include <sl/Camera.hpp>
+
 #pragma comment(lib, "sl_core64.lib")
 #pragma comment(lib, "sl_input64.lib")
 #pragma comment(lib, "sl_zed64.lib")
@@ -43,8 +45,11 @@
 #include <opencv2/opencv.hpp>            // C++
 #include <opencv2/core/version.hpp>
 #include <opencv2/highgui/highgui_c.h>
+
 #ifndef CV_VERSION_EPOCH     // OpenCV 3.x and 4.x
+
 #include <opencv2/videoio/videoio.hpp>
+
 #define OPENCV_VERSION CVAUX_STR(CV_VERSION_MAJOR)"" CVAUX_STR(CV_VERSION_MINOR)"" CVAUX_STR(CV_VERSION_REVISION)
 #ifndef USE_CMAKE_LIBS
 #pragma comment(lib, "opencv_world" OPENCV_VERSION ".lib")
@@ -69,29 +74,37 @@
 constexpr float FPS = 30.f;
 constexpr float TIME_PER_FRAME = 1.f / FPS;
 
-class CameraConeDetection
-{
+class CameraConeDetection {
 public:
     CameraConeDetection();
+
     ~CameraConeDetection();
 
     void SetSignalPublisher(ros::Publisher signalPublisher);
+
     void SetConePublisher(ros::Publisher mainPublisher);
-    #ifdef CAMERA_DETECTION_FAKE_LIDAR
+
+#ifdef CAMERA_DETECTION_FAKE_LIDAR
+
     void SetLidarConePublisher(ros::Publisher lidarConePublisher);
-    #endif//CAMERA_DETECTION_FAKE_LIDAR
-    #ifdef CAMERA_DETECTION_CARSTATE
+
+#endif//CAMERA_DETECTION_FAKE_LIDAR
+#ifdef CAMERA_DETECTION_CARSTATE
+
     void SetCarStatePublisher(ros::Publisher carStatePublisher);
-    #endif//CAMERA_DETECTION_CARSTATE
+
+#endif//CAMERA_DETECTION_CARSTATE
+
     void Do();
+
     void predict(Detector &detector, sl::MODEL &cam_model);
 
 private:
-    std::string  names_file = "kuzel.names";
-    std::string  cfg_file = "yolov3-tiny.cfg";
-    std::string  weights_file = "yolov3-tiny.weights";
+    std::string names_file = "kuzel.names";
+    std::string cfg_file = "yolov3-tiny.cfg";
+    std::string weights_file = "yolov3-tiny.weights";
     float const thresh = 0.2;
-    std::string filename = "druha_jazda.svo";
+    std::string filename = "prva_jazda.svo";
     sl::Camera zed; // ZED-camera
 
     std::string out_videofile = "result.avi";
@@ -99,19 +112,27 @@ private:
 
     ros::Publisher m_signalPublisher;
     ros::Publisher m_conePublisher;
-    #ifdef CAMERA_DETECTION_FAKE_LIDAR
+#ifdef CAMERA_DETECTION_FAKE_LIDAR
     ros::Publisher m_lidarConePublisher;
-    #endif//CAMERA_DETECTION_FAKE_LIDAR
-    #ifdef CAMERA_DETECTION_CARSTATE
+#endif//CAMERA_DETECTION_FAKE_LIDAR
+#ifdef CAMERA_DETECTION_CARSTATE
     ros::Publisher m_carStatePublisher;
-    #endif//CAMERA_DETECTION_CARSTATE
+#endif//CAMERA_DETECTION_CARSTATE
 
     float getMedian(std::vector<float> &v);
-    std::vector<bbox_t> get_3d_coordinates(std::vector<bbox_t> bbox_vect, cv::Mat xyzrgba);
+
+    std::vector <bbox_t> get_3d_coordinates(std::vector <bbox_t> bbox_vect, cv::Mat xyzrgba);
+
     cv::Mat slMat2cvMat(sl::Mat &input);
+
     cv::Mat zed_capture_rgb(sl::Camera &zed);
+
     cv::Mat zed_capture_3d(sl::Camera &zed);
-    void show_console_result(std::vector<bbox_t> const result_vec, std::vector<std::string> const obj_names, int frame_id);
-    cv::Mat draw_boxes(cv::Mat mat_img, std::vector<bbox_t> result_vec, std::vector<std::string> obj_names, int current_det_fps, int current_cap_fps);
-    std::vector<std::string> objects_names_from_file(std::string const filename);
+
+    void
+    show_console_result(std::vector <bbox_t> const result_vec, std::vector <std::string> const obj_names, int frame_id);
+
+    cv::Mat draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
+                       int current_det_fps, int current_cap_fps);
+//    std::vector<std::string> objects_names_from_file(std::string const filename);
 };
