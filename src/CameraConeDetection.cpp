@@ -320,8 +320,9 @@ void CameraConeDetection::Do() {
 #endif
 
         if (timeDiff > 0.f)
-         {
-            sleep(timeDiff);
+        {
+	    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(timeDiff * 1000.f)));
+//            sleep(timeDiff);
         } 
     }
 }
