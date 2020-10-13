@@ -125,7 +125,7 @@ private:
 #endif//CAMERA_DETECTION_CARSTATE
 
 #ifdef DEBUG_STATE
-    ros::publisher m_visDebugPublisher;
+    ros::Publisher m_visDebugPublisher;
     size_t m_numOfDetectedCones = 0;
 #endif
 
