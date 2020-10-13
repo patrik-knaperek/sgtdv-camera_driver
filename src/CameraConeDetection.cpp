@@ -315,7 +315,7 @@ void CameraConeDetection::Do() {
 
 #ifdef DEBUG_STATE
         state.workingState = 0;
-        state.numOfCones = m_numOfDetectedCones;
+        state.numOfCones = static_cast<uint32_t>(m_numOfDetectedCones);
         m_visDebugPublisher.publish(state);
 #endif
 
