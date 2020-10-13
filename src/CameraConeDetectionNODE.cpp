@@ -5,6 +5,8 @@
 
 #include <ros/ros.h>
 #include "../include/CameraConeDetection.h"
+#include <sgtdv_msgs/DebugState.h>
+#include "../../SGT_Macros.h"
 
 int main(int argc, char **argv) {
     CameraConeDetection cameraConeDetection;
@@ -14,6 +16,7 @@ int main(int argc, char **argv) {
 
     ros::Publisher conePublisher = handle.advertise<sgtdv_msgs::ConeArr>("camera_cones", 1);
     ros::Publisher signalPublisher = handle.advertise<std_msgs::Empty>("camera_ready", 1);
+    
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
     ros::Publisher lidarConePublisher = handle.advertise<sgtdv_msgs::Point2DArr>("lidar_cones", 1);
 #endif//CAMERA_DETECTION_FAKE_LIDAR
@@ -28,6 +31,11 @@ int main(int argc, char **argv) {
     cameraConeDetection.SetLidarConePublisher(lidarConePublisher);
 #endif//CAMERA_DETECTION_FAKE_LIDAR
     cameraConeDetection.SetSignalPublisher(signalPublisher);
+
+#ifdef DEBUG_STATE
+    ros::Publisher cameraConeDetectionDebugStatePublisher = handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1);
+    cameraConeDetection.SetVisDebugPublisher(cameraConeDetectionDebugStatePublisher);
+#endif
 
     cameraConeDetection.Do();
 

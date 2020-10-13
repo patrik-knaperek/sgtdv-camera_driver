@@ -11,6 +11,7 @@
 #include <sgtdv_msgs/Point2D.h>
 #include <sgtdv_msgs/Point2DArr.h>
 #include <sgtdv_msgs/CarState.h>
+#include <sgtdv_msgs/DebugState.h>
 #include "../../SGT_Macros.h"
 #include <chrono>
 
@@ -81,8 +82,11 @@ public:
     ~CameraConeDetection();
 
     void SetSignalPublisher(ros::Publisher signalPublisher);
-
     void SetConePublisher(ros::Publisher mainPublisher);
+
+#ifdef DEBUG_STATE
+    void SetVisDebugPublisher(ros::Publisher visDebugPublisher) { m_visDebugPublisher = visDebugPublisher; }
+#endif
 
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
 
@@ -119,6 +123,11 @@ private:
 #ifdef CAMERA_DETECTION_CARSTATE
     ros::Publisher m_carStatePublisher;
 #endif//CAMERA_DETECTION_CARSTATE
+
+#ifdef DEBUG_STATE
+    ros::publisher m_visDebugPublisher;
+    size_t m_numOfDetectedCones = 0;
+#endif
 
     float getMedian(std::vector<float> &v);
 

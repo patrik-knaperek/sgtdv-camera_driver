@@ -298,18 +298,31 @@ void CameraConeDetection::Do() {
 #endif
 #endif//CAMERA_DETECTION_RECORD_VIDEO
 
-    while (ros::ok()) {
+    while (ros::ok())
+    {
+#ifdef DEBUG_STATE
+        sgtdv_msgs::DebugState state;
+        state.workingState = 1;
+        m_visDebugPublisher.publish(state);
+#endif
+
+
         auto start = std::chrono::steady_clock::now();
         predict(detector, cam_model);
         auto finish = std::chrono::steady_clock::now();
         auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count() / 1000.f;
         float timeDiff = TIME_PER_FRAME - timePerFrame;
 
-        if (timeDiff > 0.f) {
+#ifdef DEBUG_STATE
+        state.workingState = 0;
+        state.numOfCones = m_numOfDetectedCones;
+        m_visDebugPublisher.publish(state);
+#endif
+
+        if (timeDiff > 0.f)
+         {
             sleep(timeDiff);
-        } else {
-            //defenzivne programovanie ftw
-        }
+        } 
     }
 }
 
@@ -343,6 +356,10 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
 
         std::vector <bbox_t> result_vec = detector.detect(cur_frame, thresh);
         result_vec = get_3d_coordinates(result_vec, zed_cloud);
+
+#ifdef DEBUG_STATE
+        m_numOfDetectedCones = result_vec.size();
+#endif
 
         sgtdv_msgs::ConeArr coneArr;
         sgtdv_msgs::Cone cone;
