@@ -310,8 +310,8 @@ void CameraConeDetection::Do() {
         auto start = std::chrono::steady_clock::now();
         predict(detector, cam_model);
         auto finish = std::chrono::steady_clock::now();
-        auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count() / 1000.f;
-        float timeDiff = TIME_PER_FRAME - timePerFrame;
+        auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
+        int timeDiff = TIME_PER_FRAME - timePerFrame;
 
 #ifdef DEBUG_STATE
         state.workingState = 0;
@@ -321,7 +321,7 @@ void CameraConeDetection::Do() {
 
         if (timeDiff > 0.f)
         {
-	    std::this_thread::sleep_for(std::chrono::milliseconds(static_cast<int>(timeDiff * 1000.f)));
+	    std::this_thread::sleep_for(std::chrono::milliseconds(timeDiff));
 //            sleep(timeDiff);
         } 
     }

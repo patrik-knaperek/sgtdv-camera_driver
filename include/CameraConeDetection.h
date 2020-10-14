@@ -72,8 +72,8 @@
 #endif    // USE_CMAKE_LIBS
 #endif    // CV_VERSION_EPOCH
 
-constexpr float FPS = 2.f;
-constexpr float TIME_PER_FRAME = 1.f / FPS;
+constexpr int FPS = 2;
+constexpr int TIME_PER_FRAME = 1000 / FPS;
 
 class CameraConeDetection {
 public:
