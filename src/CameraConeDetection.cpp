@@ -233,7 +233,8 @@ cv::Mat CameraConeDetection::zed_capture_3d(sl::Camera &zed) {
 }
 
 
-void CameraConeDetection::Do() {
+void CameraConeDetection::Do()
+{
     Detector detector(cfg_file, weights_file); //Darknet
 //    auto obj_names = objects_names_from_file(names_file);
 
