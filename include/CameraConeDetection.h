@@ -72,7 +72,7 @@
 #endif    // USE_CMAKE_LIBS
 #endif    // CV_VERSION_EPOCH
 
-constexpr int FPS = 2;
+constexpr int FPS = 20;
 constexpr int TIME_PER_FRAME = 1000 / FPS;
 
 class CameraConeDetection {
