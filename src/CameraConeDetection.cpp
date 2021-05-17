@@ -261,7 +261,12 @@ void CameraConeDetection::Do()
 
     if (file_ext == "svo") init_params.input.setFromSVOFile(filename.c_str());
 
-    zed.open(init_params);
+    sl::ERROR_CODE zed_open = zed.open(init_params);
+    if (zed_open != sl::ERROR_CODE::SUCCESS) {
+        std::cout << "ZED OPEN ERROR: " << zed_open << std::endl;
+        return;
+    }
+
     if (!zed.isOpened()) {
         std::cout << " Error: ZED Camera should be connected to USB 3.0. And ZED_SDK should be installed. \n";
         getchar();
@@ -286,8 +291,9 @@ void CameraConeDetection::Do()
 #ifdef CAMERA_DETECTION_CARSTATE
     // Set parameters for Positional Tracking
     sl::PositionalTrackingParameters tracking_parameters;
+    tracking_parameters.enable_area_memory = false; //disable to use pose_covariance
     zed.enablePositionalTracking(tracking_parameters);
-    sl::Pose camera_path;
+    sl::Pose camera_pose;
     sl::POSITIONAL_TRACKING_STATE tracking_state;
 #endif// CAMERA_DETECTION_CARSTATE
 
@@ -340,7 +346,7 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
 
 #ifdef CAMERA_DETECTION_CARSTATE
     // Set parameters for Positional Tracking
-    sl::Pose camera_path;
+    sl::Pose camera_pose;
     sl::POSITIONAL_TRACKING_STATE tracking_state;
 #endif// CAMERA_DETECTION_CARSTATE
 
@@ -394,18 +400,35 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
 #endif//CAMERA_DETECTION_FAKE_LIDAR
 
 #ifdef CAMERA_DETECTION_CARSTATE
-        sgtdv_msgs::CarState carState;
-        sgtdv_msgs::Point2D carPoint2D;
-        tracking_state = zed.getPosition(camera_path, sl::REFERENCE_FRAME::WORLD); //get actual position
-        //std::cout << "Camera position: X=" << camera_path.getTranslation().x << " Y=" << camera_path.getTranslation().y << " Z=" << camera_path.getTranslation().z << std::endl;
-        //std::cout << "Camera Euler rotation: X=" << camera_path.getEulerAngles().x << " Y=" << camera_path.getEulerAngles().y << " Z=" << camera_path.getEulerAngles().z << std::endl;
-        carPoint2D.x = camera_path.getTranslation().x;
-        carPoint2D.y = camera_path.getTranslation().y;
-        carState.position = carPoint2D;
-        carState.yaw = camera_path.getEulerAngles().z;
+        geometry_msgs::PoseWithCovarianceStamped carState;
+        tracking_state = zed.getPosition(camera_pose, sl::REFERENCE_FRAME::WORLD); //get actual position
+        // std::cout << "Camera position: X=" << camera_pose.getTranslation().x << " Y=" << camera_pose.getTranslation().y << " Z=" << camera_pose.getTranslation().z << std::endl;
+        // std::cout << "Camera Euler rotation: X=" << camera_pose.getEulerAngles().x << " Y=" << camera_pose.getEulerAngles().y << " Z=" << camera_pose.getEulerAngles().z << std::endl;
+        // std::cout << "Camera Quaternion: X=" << camera_pose.getOrientation().x << " Y=" << camera_pose.getOrientation().y << " Z=" << camera_pose.getOrientation().z << " W=" << camera_pose.getOrientation().w << std::endl;
+        // std::cout << "camera_pose.pose_covariance[36]: " << std::endl;
+        // for (size_t i = 0; i < (sizeof(camera_pose.pose_covariance)/sizeof(*camera_pose.pose_covariance)); i++) {
+        //    if ((i % 3) == 0) {
+        //        std::cout <<""<< std::endl;
+        //    }
+        //    std::cout << camera_pose.pose_covariance[i] << " ";
+        // }
+        // std::cout <<""<< std::endl;
 
-        for (size_t i = 0; i < carState.covariance.size(); i++) {
-            carState.covariance[i] = camera_path.pose_covariance[i];
+        // Fill up header message
+        carState.header.stamp = ros::Time::now();
+        carState.header.frame_id = "odom";
+        // Fill up pose message
+        carState.pose.pose.position.x = camera_pose.getTranslation().x;
+        carState.pose.pose.position.y = camera_pose.getTranslation().y;
+        carState.pose.pose.position.z = camera_pose.getTranslation().z;
+
+        carState.pose.pose.orientation.x = camera_pose.getOrientation().x;
+        carState.pose.pose.orientation.y = camera_pose.getOrientation().y;
+        carState.pose.pose.orientation.z = camera_pose.getOrientation().z;
+        carState.pose.pose.orientation.w = camera_pose.getOrientation().w;
+
+        for (size_t i = 0; i < (sizeof(camera_pose.pose_covariance)/sizeof(*camera_pose.pose_covariance)); i++) {
+            carState.pose.covariance[i] = camera_pose.pose_covariance[i];
         }
 
         m_carStatePublisher.publish(carState);

@@ -22,7 +22,7 @@ int main(int argc, char **argv) {
 #endif//CAMERA_DETECTION_FAKE_LIDAR
 
 #ifdef CAMERA_DETECTION_CARSTATE
-    ros::Publisher carStatePublisher = handle.advertise<sgtdv_msgs::CarState>("camera_pose", 1);
+    ros::Publisher carStatePublisher = handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1);
     cameraConeDetection.SetCarStatePublisher(carStatePublisher);
 #endif//CAMERA_DETECTION_CARSTATE
 
