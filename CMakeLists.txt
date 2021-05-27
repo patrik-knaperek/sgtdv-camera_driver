@@ -29,9 +29,7 @@ message(STATUS "    libraries: ${ZED_LIBRARIES}")
 message(STATUS "    libraries path: ${ZED_LIBRARY_DIR}")
 message(STATUS "    include path: ${ZED_INCLUDE_DIRS}")
 
-SET(VERSION_REQ_CUDA "10.0")
-
-find_package(CUDA ${VERSION_REQ_CUDA} REQUIRED)
+find_package(CUDA REQUIRED)
 message(STATUS "CUDA library status:")
 message(STATUS "    version: ${CUDA_VERSION}")
 message(STATUS "    libraries: ${CUDA_LIBRARIES}")
