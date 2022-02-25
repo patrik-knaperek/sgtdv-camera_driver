@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
 #endif//CAMERA_DETECTION_FAKE_LIDAR
     cameraConeDetection.SetSignalPublisher(signalPublisher);
 
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
     ros::Publisher cameraConeDetectionDebugStatePublisher = handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1);
     cameraConeDetection.SetVisDebugPublisher(cameraConeDetectionDebugStatePublisher);
 #endif

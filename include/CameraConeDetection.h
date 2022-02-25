@@ -84,7 +84,7 @@ public:
     void SetSignalPublisher(ros::Publisher signalPublisher);
     void SetConePublisher(ros::Publisher mainPublisher);
 
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
     void SetVisDebugPublisher(ros::Publisher visDebugPublisher) { m_visDebugPublisher = visDebugPublisher; }
 #endif
 
@@ -104,11 +104,11 @@ public:
     void predict(Detector &detector, sl::MODEL &cam_model);
 
 private:
-    std::string names_file = "kuzel.names";
-    std::string cfg_file = "yolov3-tiny.cfg";
-    std::string weights_file = "yolov3-tiny.weights";
+    std::string names_file = "src/camera_cone_detection/Darknet_cone_detection/obj.names";
+    std::string cfg_file = "src/camera_cone_detection/Darknet_cone_detection/yolov3-tiny.cfg";
+    std::string weights_file = "src/camera_cone_detection/Darknet_cone_detection/yolov3-tiny.weights";
     float const thresh = 0.2;
-    //std::string filename = "druha_jazda.svo";
+    //std::string filename = "src/camera_cone_detection/Darknet_cone_detection/druha_jazda.svo";
     std::string filename = "zed_camera";
     sl::Camera zed; // ZED-camera
 
@@ -124,7 +124,7 @@ private:
     ros::Publisher m_carStatePublisher;
 #endif//CAMERA_DETECTION_CARSTATE
 
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
     ros::Publisher m_visDebugPublisher;
     size_t m_numOfDetectedCones = 0;
 #endif
