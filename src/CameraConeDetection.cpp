@@ -71,7 +71,7 @@ CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec
             std::string coords_3d;
             if (!std::isnan(i.z_3d)) {
                 std::stringstream ss;
-                ss << std::fixed << std::setprecision(2) << "x:" << i.x_3d << "mm y:" << i.y_3d << "mm z:" << i.z_3d
+                ss << std::fixed << std::setprecision(2) << "x:" << i.x_3d * 1000 << "mm y:" << 		i.y_3d * 1000 << "mm z:" << i.z_3d * 1000
                    << "mm ";
                 coords_3d = ss.str();
                 cv::Size const text_size_3d = getTextSize(ss.str(), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, 1, 0);
@@ -253,7 +253,7 @@ void CameraConeDetection::Do()
     init_params.depth_minimum_distance = 0.5;
     init_params.depth_mode = sl::DEPTH_MODE::ULTRA;
     init_params.camera_resolution = sl::RESOLUTION::HD720;// sl::RESOLUTION::HD1080, sl::RESOLUTION::HD720
-    init_params.coordinate_units = sl::UNIT::MILLIMETER;
+    init_params.coordinate_units = sl::UNIT::METER;
     init_params.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;  /*< Right-Handed with Z pointing up and X forward. Used in ROS (REP 103). */
     init_params.sdk_cuda_ctx = (CUcontext) detector.get_cuda_context();//ak to bude nadavat na CUDNN tak treba zakomentova/odkomentovat
     init_params.sdk_gpu_id = detector.cur_gpu_id;
@@ -307,7 +307,7 @@ void CameraConeDetection::Do()
 
     while (ros::ok())
     {
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
         sgtdv_msgs::DebugState state;
         state.workingState = 1;
         m_visDebugPublisher.publish(state);
@@ -320,7 +320,7 @@ void CameraConeDetection::Do()
         auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
         int timeDiff = TIME_PER_FRAME - timePerFrame;
 
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
         state.workingState = 0;
         state.numOfCones = static_cast<uint32_t>(m_numOfDetectedCones);
         m_visDebugPublisher.publish(state);
@@ -365,7 +365,7 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
         std::vector <bbox_t> result_vec = detector.detect(cur_frame, thresh);
         result_vec = get_3d_coordinates(result_vec, zed_cloud);
 
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
         m_numOfDetectedCones = result_vec.size();
 #endif
 
