@@ -335,6 +335,7 @@ void CameraConeDetection::Do()
 void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
     std::vector <std::string> obj_names = {"yellow_cone", "blue_cone", "orange_cone_small", "orange_cone_big"};
 
+    ros::Time capture_time;
     cv::Mat cur_frame;
     cv::Mat zed_cloud;
 
@@ -350,6 +351,7 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
 
     //TODO function body
     if (zed.grab() == sl::ERROR_CODE::SUCCESS) {
+        capture_time = ros::Time::now();
         cur_frame = zed_capture_rgb(zed);
         zed_cloud = zed_capture_3d(zed);
         if (cur_frame.empty()) {
@@ -373,7 +375,11 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
         sgtdv_msgs::Point2DArr point2DArr;
 #endif//CAMERA_DETECTION_FAKE_LIDAR
+        int i_n = 0;
         for (auto &i : result_vec) {
+            point2D.header.frame_id = "camera_left";
+            point2D.header.seq = i_n++;
+            point2D.header.stamp = capture_time;
             point2D.x = i.x_3d;
             point2D.y = i.y_3d;
             cone.coords = point2D;
