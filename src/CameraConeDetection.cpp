@@ -48,8 +48,6 @@ void CameraConeDetection::SetCarStatePublisher(ros::Publisher carStatePublisher)
 
 #endif//CAMERA_DETECTION_CARSTATE
 
-#ifdef CAMERA_DETECTION_CAMERA_SHOW
-
 cv::Mat
 CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
                                 int current_det_fps = -1, int current_cap_fps = -1) {
@@ -96,12 +94,12 @@ CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec
         putText(mat_img, fps_str, cv::Point2f(10, 20), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2, cv::Scalar(50, 255, 0), 2);
     }
 
-    cv::imshow("window name", mat_img);
+#ifdef CAMERA_DETECTION_CAMERA_SHOW  
+	cv::imshow("window name", mat_img);
+#endif //CAMERA_DETECTION_CAMERA_SHOW
     cv::waitKey(3);
     return mat_img;
 }
-
-#endif //CAMERA_DETECTION_CAMERA_SHOW
 
 //std::vector<std::string> CameraConeDetection::objects_names_from_file(std::string const filename) {
 //	std::ifstream file(filename);
@@ -459,9 +457,8 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
         draw_boxes(cur_frame, result_vec, obj_names);
 #endif //CAMERA_DETECTION_CAMERA_SHOW
 #ifdef CAMERA_DETECTION_RECORD_VIDEO
-        //video.write(cur_frame);
+		draw_boxes(cur_frame, result_vec, obj_names);
         output_video << cur_frame;
-        //video.write(draw_boxes(cur_frame, result_vec, obj_names));
 #endif//CAMERA_DETECTION_RECORD_VIDEO
 #ifdef CAMERA_DETECTION_CONSOLE_SHOW
         show_console_result(result_vec, obj_names);
