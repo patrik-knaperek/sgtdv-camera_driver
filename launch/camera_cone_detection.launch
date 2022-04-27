@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+	<rosparam command="load" file="$(find camera_cone_detection)/param/camera_cone_detection.yaml"/>
+
+	<node pkg="camera_cone_detection" type="camera_cone_detection" name="cameraConeDetection" 		output="screen"/>
+</launch>

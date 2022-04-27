@@ -4,6 +4,7 @@
 /*****************************************************/
 
 #include <ros/ros.h>
+#include <ros/package.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/String.h>
 #include <sgtdv_msgs/ConeArr.h>
@@ -83,8 +84,15 @@ public:
 
     void SetSignalPublisher(ros::Publisher signalPublisher);
     void SetConePublisher(ros::Publisher mainPublisher);
+	void SetFilenames(std::string names, std::string cfg, std::string weights, std::string out)
+	{
+		names_file = names;
+		cfg_file = cfg;
+		weights_file = weights;
+		out_videofile = out;
+	};
 
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
     void SetVisDebugPublisher(ros::Publisher visDebugPublisher) { m_visDebugPublisher = visDebugPublisher; }
 #endif
 
@@ -104,15 +112,15 @@ public:
     void predict(Detector &detector, sl::MODEL &cam_model);
 
 private:
-    std::string names_file = "kuzel.names";
-    std::string cfg_file = "yolov3-tiny.cfg";
-    std::string weights_file = "yolov3-tiny.weights";
+    std::string names_file;
+    std::string cfg_file;
+    std::string weights_file;
     float const thresh = 0.2;
     //std::string filename = "druha_jazda.svo";
     std::string filename = "zed_camera";
     sl::Camera zed; // ZED-camera
 
-    std::string out_videofile = "result.avi";
+    std::string out_videofile;
     cv::VideoWriter output_video;
 
     ros::Publisher m_signalPublisher;
@@ -124,7 +132,7 @@ private:
     ros::Publisher m_carStatePublisher;
 #endif//CAMERA_DETECTION_CARSTATE
 
-#ifdef DEBUG_STATE
+#ifdef SGT_DEBUG_STATE
     ros::Publisher m_visDebugPublisher;
     size_t m_numOfDetectedCones = 0;
 #endif

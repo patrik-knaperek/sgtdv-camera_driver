@@ -1,0 +1,2 @@
+darknet.exe detector demo data/obj.data cfg/yolov4-tiny-obj.cfg backup/yolov4-tiny-obj_final.weights "video"
+

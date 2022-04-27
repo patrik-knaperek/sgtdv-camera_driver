@@ -1,0 +1,4 @@
+obj_names_filename: "/Darknet_cone_detection/obj.names"
+cfg_filename: "/Darknet_cone_detection/yolov3-tiny.cfg"
+weights_filename: "/Darknet_cone_detection/yolov3-tiny.weights"
+output_video_filename: "/result.avi"
