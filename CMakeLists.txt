@@ -9,6 +9,7 @@ add_compile_options(-std=c++11)
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   roscpp
+	roslib
   std_msgs
   sgtdv_msgs
 )
@@ -175,7 +176,7 @@ target_link_libraries(
     ${OpenCV_LIBS}
     ${ZED_LIBRARIES}
     #    /usr/src/ROS_implementation/darknet/libdarknet.so #treba zmenit na aktualnu cestu
-    /media/xavier/42878bfd-b273-4b67-b59c-6af6f4a4834b/Detekcia/darknet/libdarknet.so
+    /home/jetson/darknet/libdarknet.so
 
     ${catkin_LIBRARIES}
 )
