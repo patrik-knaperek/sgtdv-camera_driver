@@ -116,7 +116,7 @@ private:
     std::string cfg_file;
     std::string weights_file;
     float const thresh = 0.2;
-    //std::string filename = "druha_jazda.svo";
+    //std::string filename = "src/camera_cone_detection/Darknet_cone_detection/druha_jazda.svo";
     std::string filename = "zed_camera";
     sl::Camera zed; // ZED-camera
 
