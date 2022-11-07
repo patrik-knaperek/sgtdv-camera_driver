@@ -1,4 +1,17 @@
-# camera_cone_detection
+# **CameraConeDetection package**
+
+___
+
+&copy; **SGT Driverless**
+
+**Authors:** Juraj Krasňanský, Matúš Tomšík
+
+**Objective:** Cone detection, position estimation and classification from ZED camera picture.
+
+___
+
+### Related packages
+* `visual_odometry`
 
 ### Requirements
 
@@ -8,42 +21,58 @@
 * [**Darknet**](https://github.com/AlexeyAB/darknet)  
   
 
-### Kompilacia Darknetu
-* Povolit v Makefile:
+### Darknet compilation
+* Set in `Makefile`:
   * GPU=1
   * CUDNN=1
   * CUDNN_HALF=1
   * LIBSO=1
-* Nasledne skompilovat pomocou `$ make`
-* Vygenerovany subor `libdarknet.so` skopirovat do `camera_cone_detection/include`
+* Then compile with `$ make`
+* Copy generated `libdarknet.so` file into `camera_cone_detection/include`
 
 
-## Implementacia detekcie cez kameru v C++
+## Compilation
 
-Konfiguracne subory pre neuronku, vygenerovane .weights a .svo subory su v adresari [**Darknet_cone_detection**](https://drive.google.com/drive/folders/144MJlPqqrMii9dVJtaWv_vCwrJNkGFed?usp=sharing) na G-Drive. Adresar treba skopirovat do `src/camera_cone_detection`. V pripade zmeny niektoreho suboru v nom, treba ho aktualizovat na G-Drive.
+Configuration files for NN, generated *.weights and *.svo files are stored in folder [**Darknet_cone_detection**](https://drive.google.com/drive/folders/144MJlPqqrMii9dVJtaWv_vCwrJNkGFed?usp=sharing) on G-Drive. Copy this folder into `src/camera_cone_detection/`. If any file is changed, it needs to be updated on G-Drive.
 
-### Kompilacia
- * `$ cd /ros_implementation/src/`
- * `$ catkin build camera_cone_detection ` (ak nie je, treba predtym skompilovat aj `sgtdv_msgs`)
+The following packages have to be built at first:
+  - `sgtdv_msgs`
 
-### Konfiguracia
+In folder `ros_implementation/src/` run:
+```
+$ catkin build camera_cone_detection
+```
 
-V `SGT_Macros.h` je mozne vypnut/zapnut funkcionality (po kazdej zmene treba znovu skompilovat balicek)
- * `CAMERA_DETECTION_CARSTATE` : publikovanie udajov z odometrie na `visual_odometry` topic
- * `CAMERA_DETECTION_CAMERA_SHOW` : live zobrazenie videa z kamery spolu s bounding boxami v okne (pri ssh pristupe treba vypnut)
- * `CAMERA_DETECTION_FAKE_LIDAR` : publikovanie detekcii aj na `lidar_cones` topic
- * `CAMERA_DETECTION_CONSOLE_SHOW` : vypisovanie vysledkov detekcie do konzoly
- * `CAMERA_DETECTION_RECORD_VIDEO` : nahravanie vystupneho videa
- * `CAMERA_DETECTION_RECORD_VIDEO_SVO` : nahravanie videa vo formate, ktory sa da pouzit ako vstup miesto obrazu z kamery
+### Compilation configuration
 
-V `param/camera_cone_detection.yaml` sa nastavuje cesta ku konfigurakom neuronky a vystupnym suborom (pri zapnutom nahravani)
+`SGT_Macros.h`:
+ * `CAMERA_DETECTION_CARSTATE` : publish camera pose (left eye) in `odom` frame to `/camera_pose` topic
+ * `CAMERA_DETECTION_CAMERA_SHOW` : show live video stream with bounding boxes in a separate window (must be turned off in case of SSH access)
+ * `CAMERA_DETECTION_FAKE_LIDAR` : publish position of detected cones on `/lidar_cones` topic
+ * `CAMERA_DETECTION_CONSOLE_SHOW` : print detection results in terminal
+ * `CAMERA_DETECTION_RECORD_VIDEO` : record output video stream (MP4)
+ * `CAMERA_DETECTION_RECORD_VIDEO_SVO` : record output video (SVO) which can be used as input stream instead of live camera picture
 
-Vstupny stream sa nastavuje pomocou premennej `filename` v subore `CameraConeDetection.h`:
- * **"zed_camera"**: live obraz z kamery
- * **"<path_to_.svo_file>"**: nahrate .svo video
+Set the input stream in `CameraConeDetection.h` with variable `filename` value:
+ * **"zed_camera"** : live camera picture
+ * **"<path_to_.svo_file>"** : recorded SVO video
 
-### Spustenie
+## Launch
+```
+  $ source ros_implementation/devel/setup.bash
+  $ roslaunch camera_cone_detection camera_cone_detection.launch
+```
 
- * `$ . ros_implementation/devel/setup.bash`
- * `$ roslaunch camera_cone_detection camera_cone_detection.launch `
+### Launch configuration
+In `param/camera_cone_detection.yaml` path to NN configuration files and output files can be set.
+
+### RViz visualization
+In new terminal run:
+```
+    $ source ros_implementation/devel/setup.bash
+    $ roslaunch sensors_visualizator sensors_visualizator_camera.launch
+```
+
+ ## Visual odometry
+ Node `visual_odometry` located in `visual_odometry` package subscribes `/camera_pose` topic from `camera_cone_detection` node and publishes transformation from `camera_left` to `odom` frame on general `/tf` topic.
 
