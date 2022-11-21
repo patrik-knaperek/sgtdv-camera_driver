@@ -74,5 +74,5 @@ In new terminal run:
 ```
 
  ## Visual odometry
- Node `visual_odometry` located in `visual_odometry` package subscribes `/camera_pose` topic from `camera_cone_detection` node and publishes transformation from `camera_left` to `odom` frame on general `/tf` topic.
+ Node `visualOdometry` located in `visual_odometry` package subscribes `/camera_pose` topic from `cameraConeDetection` node and publishes transformation from `base_link` to `odom` frame on general `/tf` topic.
 

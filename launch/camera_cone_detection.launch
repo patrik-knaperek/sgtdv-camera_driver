@@ -2,8 +2,8 @@
 <launch>
 	<rosparam command="load" file="$(find camera_cone_detection)/param/camera_cone_detection.yaml"/>
 
-	<node pkg="camera_cone_detection" type="camera_cone_detection" name="cameraConeDetection" 		output="screen"/>
-
 	<node pkg="tf2_ros" type="static_transform_publisher" name="camera_left_to_camera_center" 
     args="0 0.06 0 0 0 0 camera_center camera_left" />
+
+	<node pkg="camera_cone_detection" type="camera_cone_detection" name="cameraConeDetection" output="screen"/>
 </launch>
