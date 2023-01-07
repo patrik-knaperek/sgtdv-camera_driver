@@ -84,12 +84,14 @@ public:
 
     void SetSignalPublisher(ros::Publisher signalPublisher);
     void SetConePublisher(ros::Publisher mainPublisher);
-	void SetFilenames(std::string names, std::string cfg, std::string weights, std::string out)
+	void SetFilenames(std::string names, std::string cfg, std::string weights, 
+                        std::string out, std::string svo)
 	{
 		names_file = names;
 		cfg_file = cfg;
 		weights_file = weights;
 		out_videofile = out;
+        out_svofile = svo;
 	};
 
 #ifdef SGT_DEBUG_STATE
@@ -116,11 +118,12 @@ private:
     std::string cfg_file;
     std::string weights_file;
     float const thresh = 0.2;
-    //std::string filename = "druha_jazda.svo";
+    //std::string filename = ros::package::getPath("camera_cone_detection") + "/Darknet_cone_detection/druha_jazda.svo";
     std::string filename = "zed_camera";
     sl::Camera zed; // ZED-camera
 
     std::string out_videofile;
+    std::string out_svofile;
     cv::VideoWriter output_video;
 
     ros::Publisher m_signalPublisher;

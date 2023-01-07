@@ -137,7 +137,7 @@ catkin_package(
 ## Specify additional locations of header files
 ## Your package locations should be listed before other locations
 include_directories(
-# include
+  include
   ${OpenCV_INCLUDE_DIRS}
   ${CUDA_INCLUDE_DIRS}
   ${ZED_INCLUDE_DIRS}
@@ -176,7 +176,8 @@ target_link_libraries(
     ${OpenCV_LIBS}
     ${ZED_LIBRARIES}
     #    /usr/src/ROS_implementation/darknet/libdarknet.so #treba zmenit na aktualnu cestu
-    /home/jetson/darknet/libdarknet.so
+    #/media/xavier/42878bfd-b273-4b67-b59c-6af6f4a4834b/SGT_DV/darknet/libdarknet.so
+    ${PROJECT_SOURCE_DIR}/include/libdarknet.so
 
     ${catkin_LIBRARIES}
 )
