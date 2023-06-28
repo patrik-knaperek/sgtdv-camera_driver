@@ -248,7 +248,7 @@ void CameraConeDetection::Do()
 
     // init zed camera
     sl::InitParameters init_params;
-    init_params.depth_minimum_distance = 0.5;
+    init_params.depth_minimum_distance = 1.7;
     init_params.depth_mode = sl::DEPTH_MODE::ULTRA;
     init_params.camera_resolution = sl::RESOLUTION::HD720;// sl::RESOLUTION::HD1080, sl::RESOLUTION::HD720
     init_params.coordinate_units = sl::UNIT::METER;
