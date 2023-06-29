@@ -369,11 +369,11 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
         m_numOfDetectedCones = result_vec.size();
 #endif
 
-        sgtdv_msgs::ConeArr coneArr;
-        sgtdv_msgs::Cone cone;
-        sgtdv_msgs::Point2D point2D;
+        sgtdv_msgs::ConeStampedArr coneArr;
+        sgtdv_msgs::ConeStamped cone;
+        sgtdv_msgs::Point2DStamped point2D;
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
-        sgtdv_msgs::Point2DArr point2DArr;
+        sgtdv_msgs::Point2DAStampedrr point2DArr;
 #endif//CAMERA_DETECTION_FAKE_LIDAR
         int i_n = 0;
         for (auto &i : result_vec) {

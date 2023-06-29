@@ -7,9 +7,9 @@
 #include <ros/package.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/String.h>
-#include <sgtdv_msgs/ConeArr.h>
-#include <sgtdv_msgs/Cone.h>
-#include <sgtdv_msgs/Point2D.h>
+#include <sgtdv_msgs/ConeStampedArr.h>
+#include <sgtdv_msgs/ConeStamped.h>
+#include <sgtdv_msgs/Point2DStamped.h>
 #include <sgtdv_msgs/Point2DArr.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sgtdv_msgs/DebugState.h>
