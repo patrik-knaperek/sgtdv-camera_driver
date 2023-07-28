@@ -23,7 +23,7 @@ message(STATUS "    include path: ${OpenCV_INCLUDE_DIRS}")
 ## System dependencies are found with CMake's conventions
 # find_package(Boost REQUIRED COMPONENTS system)
 
-find_package(ZED 3 REQUIRED)
+find_package(ZED 4 REQUIRED)
 message(STATUS "ZED library status:")
 message(STATUS "    version: ${ZED_VERSION}")
 message(STATUS "    libraries: ${ZED_LIBRARIES}")

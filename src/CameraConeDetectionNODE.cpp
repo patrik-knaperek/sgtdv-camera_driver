@@ -37,11 +37,11 @@ int main(int argc, char **argv) {
 									pathToPackage + outVideoFilename,
                                     pathToPackage + outSvoFilename);
 
-    ros::Publisher conePublisher = handle.advertise<sgtdv_msgs::ConeArr>("camera_cones", 1);
+    ros::Publisher conePublisher = handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1);
     ros::Publisher signalPublisher = handle.advertise<std_msgs::Empty>("camera_ready", 1);
     
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
-    ros::Publisher lidarConePublisher = handle.advertise<sgtdv_msgs::Point2DArr>("lidar_cones", 1);
+    ros::Publisher lidarConePublisher = handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1);
 #endif//CAMERA_DETECTION_FAKE_LIDAR
 
 #ifdef CAMERA_DETECTION_CARSTATE
