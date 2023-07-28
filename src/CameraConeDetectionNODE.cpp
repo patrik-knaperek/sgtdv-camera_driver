@@ -31,11 +31,15 @@ int main(int argc, char **argv) {
 
     std::string outSvoFilename;
 	handle.getParam("/output_svo_filename", outSvoFilename);
+
+    std::string inSvoFilename;
+	handle.getParam("/input_svo_filename", inSvoFilename);
 	cameraConeDetection.SetFilenames(pathToPackage + objNamesFilename,
 									pathToPackage + cfgFilename,
 									pathToPackage + weightsFilename,
 									pathToPackage + outVideoFilename,
-                                    pathToPackage + outSvoFilename);
+                                    pathToPackage + outSvoFilename,
+                                    pathToPackage + inSvoFilename);
 
     ros::Publisher conePublisher = handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1);
     ros::Publisher signalPublisher = handle.advertise<std_msgs::Empty>("camera_ready", 1);
