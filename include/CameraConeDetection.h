@@ -7,9 +7,9 @@
 #include <ros/package.h>
 #include <std_msgs/Empty.h>
 #include <std_msgs/String.h>
-#include <sgtdv_msgs/ConeArr.h>
-#include <sgtdv_msgs/Cone.h>
-#include <sgtdv_msgs/Point2D.h>
+#include <sgtdv_msgs/ConeStampedArr.h>
+#include <sgtdv_msgs/ConeStamped.h>
+#include <sgtdv_msgs/Point2DStamped.h>
 #include <sgtdv_msgs/Point2DArr.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sgtdv_msgs/DebugState.h>
@@ -85,13 +85,16 @@ public:
     void SetSignalPublisher(ros::Publisher signalPublisher);
     void SetConePublisher(ros::Publisher mainPublisher);
 	void SetFilenames(std::string names, std::string cfg, std::string weights, 
-                        std::string out, std::string svo)
+                        std::string out, std::string out_svo, std::string in_svo)
 	{
 		names_file = names;
 		cfg_file = cfg;
 		weights_file = weights;
 		out_videofile = out;
-        out_svofile = svo;
+        out_svofile = out_svo;
+        in_svofile = in_svo;
+
+        filename = in_svofile;
 	};
 
 #ifdef SGT_DEBUG_STATE
@@ -114,17 +117,14 @@ public:
     void predict(Detector &detector, sl::MODEL &cam_model);
 
 private:
-    std::string names_file;
-    std::string cfg_file;
-    std::string weights_file;
-    float const thresh = 0.2;
+    std::string names_file, cfg_file, weights_file, out_videofile, out_svofile, in_svofile;
+    
     //std::string filename = ros::package::getPath("camera_cone_detection") + "/Darknet_cone_detection/druha_jazda.svo";
     std::string filename = "zed_camera";
     sl::Camera zed; // ZED-camera
 
-    std::string out_videofile;
-    std::string out_svofile;
     cv::VideoWriter output_video;
+    float const thresh = 0.2;
 
     ros::Publisher m_signalPublisher;
     ros::Publisher m_conePublisher;

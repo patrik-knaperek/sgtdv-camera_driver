@@ -248,7 +248,7 @@ void CameraConeDetection::Do()
 
     // init zed camera
     sl::InitParameters init_params;
-    init_params.depth_minimum_distance = 0.5;
+    init_params.depth_minimum_distance = 1.7;
     init_params.depth_mode = sl::DEPTH_MODE::ULTRA;
     init_params.camera_resolution = sl::RESOLUTION::HD720;// sl::RESOLUTION::HD1080, sl::RESOLUTION::HD720
     init_params.coordinate_units = sl::UNIT::METER;
@@ -258,7 +258,7 @@ void CameraConeDetection::Do()
     //init_params.camera_buffer_count_linux = 2;
 
     if (file_ext == "svo") init_params.input.setFromSVOFile(filename.c_str());
-
+    
     sl::ERROR_CODE zed_open = zed.open(init_params);
     if (zed_open != sl::ERROR_CODE::SUCCESS) {
         std::cout << "ZED OPEN ERROR: " << zed_open << std::endl;
@@ -278,7 +278,7 @@ void CameraConeDetection::Do()
 
 #ifdef CAMERA_DETECTION_RECORD_VIDEO_SVO
     sl::ERROR_CODE err;
-    err = zed.enableRecording(sl::RecordingParameters("myVideoFile.svo", sl::SVO_COMPRESSION_MODE::H264));
+    err = zed.enableRecording(sl::RecordingParameters(out_svofile.c_str(), sl::SVO_COMPRESSION_MODE::H264));
     if (err != sl::ERROR_CODE::SUCCESS) {
         std::cout <<"CAMERA_DETECTION_RECORD_VIDEO_SVO: " <<  sl::toString(err) << std::endl;
     }
@@ -369,11 +369,11 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
         m_numOfDetectedCones = result_vec.size();
 #endif
 
-        sgtdv_msgs::ConeArr coneArr;
-        sgtdv_msgs::Cone cone;
-        sgtdv_msgs::Point2D point2D;
+        sgtdv_msgs::ConeStampedArr coneArr;
+        sgtdv_msgs::ConeStamped cone;
+        sgtdv_msgs::Point2DStamped point2D;
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
-        sgtdv_msgs::Point2DArr point2DArr;
+        sgtdv_msgs::Point2DAStampedrr point2DArr;
 #endif//CAMERA_DETECTION_FAKE_LIDAR
         int i_n = 0;
         for (auto &i : result_vec) {
@@ -419,7 +419,7 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model) {
         // std::cout <<""<< std::endl;
 
         // Fill up header message
-        carState.header.stamp = ros::Time::now();
+        carState.header.stamp = capture_time;
         carState.header.frame_id = "odom";
         // Fill up pose message
         carState.pose.pose.position.x = camera_pose.getTranslation().x;
