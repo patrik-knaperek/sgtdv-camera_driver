@@ -303,6 +303,7 @@ void CameraConeDetection::Do()
 #endif
 #endif//CAMERA_DETECTION_RECORD_VIDEO
 
+    ros::Rate loop_rate(FPS);
     while (ros::ok())
     {
 #ifdef SGT_DEBUG_STATE
@@ -310,13 +311,13 @@ void CameraConeDetection::Do()
         state.workingState = 1;
         m_visDebugPublisher.publish(state);
 #endif
+        ros::spinOnce();
 
-
-        auto start = std::chrono::steady_clock::now();
+        // auto start = std::chrono::steady_clock::now();
         predict(detector, cam_model);
-        auto finish = std::chrono::steady_clock::now();
-        auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
-        int timeDiff = TIME_PER_FRAME - timePerFrame;
+        // auto finish = std::chrono::steady_clock::now();
+        // auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
+        // int timeDiff = TIME_PER_FRAME - timePerFrame;
 
 #ifdef SGT_DEBUG_STATE
         state.workingState = 0;
@@ -324,11 +325,12 @@ void CameraConeDetection::Do()
         m_visDebugPublisher.publish(state);
 #endif
 
-        if (timeDiff > 0.f)
-        {
-	    std::this_thread::sleep_for(std::chrono::milliseconds(timeDiff));
-//            sleep(timeDiff);
-        } 
+//         if (timeDiff > 0.f)
+//         {
+// 	    std::this_thread::sleep_for(std::chrono::milliseconds(timeDiff));
+// //            sleep(timeDiff);
+//         } 
+        loop_rate.sleep();
     }
 }
 
