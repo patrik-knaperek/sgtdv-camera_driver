@@ -46,8 +46,12 @@ void CameraConeDetection::SetCarStatePublisher(ros::Publisher carStatePublisher)
     m_carStatePublisher = carStatePublisher;
 }
 
-#endif//CAMERA_DETECTION_CARSTATE
+void CameraConeDetection::ResetOdomCallback(const std_msgs::Empty::ConstPtr& msg)
+{
+    zed.resetPositionalTracking(sl::Transform(sl::Matrix4f::identity()));
+}
 
+#endif//CAMERA_DETECTION_CARSTATE
 cv::Mat
 CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
                                 int current_det_fps = -1, int current_cap_fps = -1) {

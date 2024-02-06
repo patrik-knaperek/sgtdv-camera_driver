@@ -109,6 +109,8 @@ public:
 #ifdef CAMERA_DETECTION_CARSTATE
 
     void SetCarStatePublisher(ros::Publisher carStatePublisher);
+    void ResetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
+
 
 #endif//CAMERA_DETECTION_CARSTATE
 

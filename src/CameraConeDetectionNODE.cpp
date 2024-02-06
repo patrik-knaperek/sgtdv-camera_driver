@@ -10,10 +10,10 @@
 #include "../../SGT_Macros.h"
 
 int main(int argc, char **argv) {
-    CameraConeDetection cameraConeDetection;
-
     ros::init(argc, argv, "cameraConeDetection");
     ros::NodeHandle handle;
+
+    CameraConeDetection cameraConeDetection;
 
 	std::string pathToPackage = ros::package::getPath("camera_cone_detection");	
 
@@ -43,6 +43,8 @@ int main(int argc, char **argv) {
 
     ros::Publisher conePublisher = handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1);
     ros::Publisher signalPublisher = handle.advertise<std_msgs::Empty>("camera_ready", 1);
+
+    ros::Subscriber resetOdomSubscriber = handle.subscribe("reset_odometry", 1, &CameraConeDetection::ResetOdomCallback, &cameraConeDetection);
     
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
     ros::Publisher lidarConePublisher = handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1);

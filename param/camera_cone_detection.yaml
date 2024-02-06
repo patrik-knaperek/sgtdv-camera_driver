@@ -1,7 +1,7 @@
 obj_names_filename: "/Darknet_cone_detection/obj.names"
 cfg_filename: "/Darknet_cone_detection/yolov3-tiny.cfg"
 weights_filename: "/Darknet_cone_detection/yolov3-tiny.weights"
-output_video_filename: "/recordings/camera_cone_detection.avi"
+output_video_filename: "/recordings/rc_test.avi"
 output_svo_filename: "/calibration/9m_right.svo"
 #input_svo_filename: "/calibration/yellow_9m_right_repaired.svo" # SVO file
 input_svo_filename: "zed_camera"                                # ZED camera
