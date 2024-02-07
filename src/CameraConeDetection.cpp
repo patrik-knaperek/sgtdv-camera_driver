@@ -312,6 +312,7 @@ void CameraConeDetection::Do()
     {
 #ifdef SGT_DEBUG_STATE
         sgtdv_msgs::DebugState state;
+        state.stamp = ros::Time::now();
         state.workingState = 1;
         m_visDebugPublisher.publish(state);
 #endif
@@ -325,6 +326,7 @@ void CameraConeDetection::Do()
 
 #ifdef SGT_DEBUG_STATE
         state.workingState = 0;
+        state.stamp = ros::Time::now()
         state.numOfCones = static_cast<uint32_t>(m_numOfDetectedCones);
         m_visDebugPublisher.publish(state);
 #endif
