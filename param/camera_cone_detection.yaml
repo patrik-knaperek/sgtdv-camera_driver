@@ -3,9 +3,9 @@ cfg_filename: "/Darknet_cone_detection/FSOCO24_yolov4-tiny.cfg"
 weights_filename: "/Darknet_cone_detection/FSOCO24_yolov4-tiny_best.weights"
 output_video_filename: "/recordings/rc_test.avi"
 output_svo_filename: "/calibration/9m_right.svo"
-#input_svo_filename: "/calibration/yellow_9m_right_repaired.svo" # SVO file
-input_svo_filename: "zed_camera"                                # ZED camera
-#input_svo_filename: "/Darknet_cone_detection/druha_jazda.svo"     # SVO video
+
+input_stream: "zed_camera"                                # ZED camera
+#input_stream: "/Darknet_cone_detection/druha_jazda.svo"     # SVO video
 
 publish_carstate: true  # publish pose from ZED visual odometry
 camera_show: false      # show live camera stream in window - not possible through SSH

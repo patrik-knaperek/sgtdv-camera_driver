@@ -8,5 +8,5 @@
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_center_to_base_link" 
     args="0 0 0 0 0 0 base_link camera_center" />
 
-  <node pkg="camera_cone_detection" type="camera_cone_detection" name="cameraConeDetection" output="screen"/>
+  <node pkg="camera_cone_detection" type="camera_cone_detection" name="camera_cone_detection" output="screen"/>
 </launch>

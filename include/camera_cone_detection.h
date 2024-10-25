@@ -84,21 +84,20 @@ public:
 
   ~CameraConeDetection();
 
-  void SetSignalPublisher(ros::Publisher signalPublisher);
-  void SetConePublisher(ros::Publisher mainPublisher);
-	void SetFilenames(std::string names, std::string cfg, std::string weights, 
-                    std::string out, std::string out_svo, std::string in_svo)
-	{
-		names_file = names;
-		cfg_file = cfg;
-		weights_file = weights;
-		out_videofile = out;
-    out_svofile = out_svo;
-    in_svofile = in_svo;
-    filename = in_svofile;
-	};
+  void setSignalPublisher(ros::Publisher signal_publisher);
+  void setConePublisher(ros::Publisher main_publisher);
+  void setFilenames(std::string names, std::string cfg, std::string weights, 
+                    std::string out, std::string out_svo, std::string in_stream)
+  {
+    names_file_ = names;
+    cfg_file_ = cfg;
+    weights_file_ = weights;
+    out_videofile_ = out;
+    out_svofile_ = out_svo;
+    input_stream_ = in_stream;
+  };
 
-  void SetMacros(const bool carstate, const bool camera_show, const bool fake_lidar, const bool console_show, 
+  void setMacros(const bool carstate, const bool camera_show, const bool fake_lidar, const bool console_show, 
                 const bool record_video, const bool record_video_svo)
   {
     publish_carstate_ = carstate;
@@ -110,16 +109,16 @@ public:
   };
 
 #ifdef SGT_DEBUG_STATE
-  void SetVisDebugPublisher(ros::Publisher visDebugPublisher) { m_visDebugPublisher = visDebugPublisher; }
+  void setVisDebugPublisher(ros::Publisher vis_debug_pub) { vis_debug_pub_ = vis_debug_pub; }
 #endif
 
-  void SetLidarConePublisher(ros::Publisher lidarConePublisher);
+  void setLidarConePublisher(ros::Publisher lidar_cone_pub);
 
-  void SetCarStatePublisher(ros::Publisher carStatePublisher);
-  void ResetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
+  void setCarStatePublisher(ros::Publisher carstate_pub);
+  void resetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
 
 
-  void Do();
+  void update();
 
   void predict(Detector &detector, sl::MODEL &cam_model);
 
@@ -132,25 +131,25 @@ public:
   };
 
 private:
-  std::string names_file, cfg_file, weights_file, out_videofile, out_svofile, in_svofile;
+  std::string names_file_, cfg_file_, weights_file_, out_videofile_, out_svofile_;
   bool publish_carstate_ = false, camera_show_ = false, fake_lidar_ = false, console_show_ = false,
       record_video_ = false, record_video_svo_ = false;
 
-  //std::string filename = ros::package::getPath("camera_cone_detection") + "/Darknet_cone_detection/druha_jazda.svo";
-  std::string filename = "zed_camera";
-  sl::Camera zed; // ZED-camera
+  //std::string input_stream_ = ros::package::getPath("camera_cone_detection") + "/Darknet_cone_detection/druha_jazda.svo";
+  std::string input_stream_ = "zed_camera";
+  sl::Camera zed_; // ZED-camera
 
-  cv::VideoWriter output_video;
+  cv::VideoWriter output_video_;
   float const thresh = 0.2;
 
-  ros::Publisher m_signalPublisher;
-  ros::Publisher m_conePublisher;
-  ros::Publisher m_lidarConePublisher;
-  ros::Publisher m_carStatePublisher;
+  ros::Publisher signal_pub_;
+  ros::Publisher cone_pub_;
+  ros::Publisher lidar_cone_pub_;
+  ros::Publisher carstate_pub_;
 
 #ifdef SGT_DEBUG_STATE
-  ros::Publisher m_visDebugPublisher;
-  size_t m_numOfDetectedCones = 0;
+  ros::Publisher vis_debug_pub_;
+  size_t num_of_detected_cones_ = 0;
 #endif
 
   float getMedian(std::vector<float> &v);
@@ -159,14 +158,14 @@ private:
 
   cv::Mat slMat2cvMat(sl::Mat &input);
 
-  cv::Mat zed_capture_rgb(sl::Camera &zed);
+  cv::Mat zedCaptureRGB(sl::Camera &zed);
 
-  cv::Mat zed_capture_3d(sl::Camera &zed);
+  cv::Mat zedCapture3D(sl::Camera &zed);
 
   void
-  show_console_result(std::vector <bbox_t> const result_vec, std::vector <std::string> const obj_names, int frame_id);
+  showConsoleResult(std::vector <bbox_t> const result_vec, std::vector <std::string> const obj_names, int frame_id);
 
-  cv::Mat draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
+  cv::Mat drawBoxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
                       int current_det_fps, int current_cap_fps);
-  // std::vector<std::string> objects_names_from_file(std::string const filename);
+  // std::vector<std::string> objects_names_from_file(std::string const input_stream);
 };
