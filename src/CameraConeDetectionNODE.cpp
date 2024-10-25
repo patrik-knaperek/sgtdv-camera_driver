@@ -9,65 +9,71 @@
 #include <sgtdv_msgs/DebugState.h>
 #include "../../SGT_Macros.h"
 
-int main(int argc, char **argv) {
-    ros::init(argc, argv, "cameraConeDetection");
-    ros::NodeHandle handle;
+int main(int argc, char **argv)
+{
+  ros::init(argc, argv, "cameraConeDetection");
+  ros::NodeHandle handle;
 
-    CameraConeDetection cameraConeDetection;
+  CameraConeDetection cameraConeDetection;
 
-	std::string pathToPackage = ros::package::getPath("camera_cone_detection");	
+  std::string pathToPackage = ros::package::getPath("camera_cone_detection");	
 
-	std::string objNamesFilename;	
-	handle.getParam("/obj_names_filename", objNamesFilename);
-	
-	std::string cfgFilename;
-	handle.getParam("/cfg_filename", cfgFilename);
-	
-	std::string weightsFilename;
-	handle.getParam("/weights_filename", weightsFilename);
+  std::string objNamesFilename;	
+  handle.getParam("/obj_names_filename", objNamesFilename);
 
-	std::string outVideoFilename;
-	handle.getParam("/output_video_filename", outVideoFilename);
+  std::string cfgFilename;
+  handle.getParam("/cfg_filename", cfgFilename);
 
-    std::string outSvoFilename;
-	handle.getParam("/output_svo_filename", outSvoFilename);
+  std::string weightsFilename;
+  handle.getParam("/weights_filename", weightsFilename);
+
+  std::string outVideoFilename;
+  handle.getParam("/output_video_filename", outVideoFilename);
+
+  std::string outSvoFilename;
+  handle.getParam("/output_svo_filename", outSvoFilename);
 
     std::string inSvoFilename;
-	handle.getParam("/input_svo_filename", inSvoFilename);
-	cameraConeDetection.SetFilenames(pathToPackage + objNamesFilename,
-									pathToPackage + cfgFilename,
-									pathToPackage + weightsFilename,
-									pathToPackage + outVideoFilename,
-                                    pathToPackage + outSvoFilename,
-                                    pathToPackage + inSvoFilename);
+  handle.getParam("/input_svo_filename", inSvoFilename);
+  cameraConeDetection.SetFilenames(pathToPackage + objNamesFilename,
+                  pathToPackage + cfgFilename,
+                  pathToPackage + weightsFilename,
+                  pathToPackage + outVideoFilename,
+                  pathToPackage + outSvoFilename,
+                  pathToPackage + inSvoFilename);
 
-    bool publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo;
-    handle.getParam("/publish_carstate", publish_carstate);
-    handle.getParam("/camera_show", camera_show);
-    handle.getParam("/fake_lidar", fake_lidar);
-    handle.getParam("/console_show", console_show);
-    handle.getParam("/record_video", record_video);
-    handle.getParam("/record_video_svo", record_video_svo);
-    cameraConeDetection.SetMacros(publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo);
+  bool publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo;
+  handle.getParam("/camera_show", camera_show);
+  handle.getParam("/publish_carstate", publish_carstate);
+  handle.getParam("/fake_lidar", fake_lidar);
+  handle.getParam("/console_show", console_show);
+  handle.getParam("/record_video", record_video);
+  handle.getParam("/record_video_svo", record_video_svo);
+  cameraConeDetection.SetMacros(
+    publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo);
 
-    cameraConeDetection.SetConePublisher(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1));
-    cameraConeDetection.SetSignalPublisher(handle.advertise<std_msgs::Empty>("camera_ready", 1));
-    
-    if(fake_lidar) cameraConeDetection.SetLidarConePublisher(handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1));
+  cameraConeDetection.SetConePublisher(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1));
+  cameraConeDetection.SetSignalPublisher(handle.advertise<std_msgs::Empty>("camera_ready", 1));
+  
+  if(fake_lidar) 
+    cameraConeDetection.SetLidarConePublisher(handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1));
 
-    if(publish_carstate)
-    {
-        cameraConeDetection.SetCarStatePublisher(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1));
-        ros::Subscriber resetOdomSubscriber = handle.subscribe("reset_odometry", 1, &CameraConeDetection::ResetOdomCallback, &cameraConeDetection);
-    }
+  if(publish_carstate)
+  {
+    cameraConeDetection.SetCarStatePublisher(
+      handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1));
+    ros::Subscriber resetOdomSubscriber 
+      = handle.subscribe("reset_odometry", 1, &CameraConeDetection::ResetOdomCallback, &cameraConeDetection);
+  }
 
 #ifdef SGT_DEBUG_STATE
-    ros::Publisher cameraConeDetectionDebugStatePublisher = handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1);
-    cameraConeDetection.SetVisDebugPublisher(cameraConeDetectionDebugStatePublisher);
+  ros::Publisher cameraConeDetectionDebugStatePublisher 
+    = handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1);
+  cameraConeDetection.SetVisDebugPublisher(cameraConeDetectionDebugStatePublisher);
 #endif
 
-    cameraConeDetection.Do();
+  cameraConeDetection.Do();
 
-    return 0;
+  return 0;
 }
 
