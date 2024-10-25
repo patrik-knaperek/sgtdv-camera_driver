@@ -1,4 +1,4 @@
-obj_names_filename: "/Darknet_cone_detection/kuzel.names"
+# obj_names_filename: "/Darknet_cone_detection/kuzel.names"
 cfg_filename: "/Darknet_cone_detection/FSOCO24_yolov4-tiny.cfg"
 weights_filename: "/Darknet_cone_detection/FSOCO24_yolov4-tiny_best.weights"
 output_video_filename: "/recordings/rc_test.avi"

@@ -12,6 +12,7 @@ find_package(catkin REQUIRED COMPONENTS
 	roslib
   std_msgs
   sgtdv_msgs
+  eigen_conversions
 )
 
 find_package(OpenCV REQUIRED)
@@ -36,6 +37,8 @@ message(STATUS "    version: ${CUDA_VERSION}")
 message(STATUS "    libraries: ${CUDA_LIBRARIES}")
 message(STATUS "    libraries path: ${CUDA_LIBRARY_DIR}")
 message(STATUS "    include path: ${CUDA_INCLUDE_DIRS}")
+
+find_package(Eigen3 REQUIRED)
 
 ## Uncomment this if the package has a setup.py. This macro ensures
 ## modules and global scripts declared therein get installed
@@ -142,6 +145,7 @@ include_directories(
   ${CUDA_INCLUDE_DIRS}
   ${ZED_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
+  ${Eigen3_INCLUDE_DIRS}
 )
 
 ## Declare a C++ library

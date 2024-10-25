@@ -3,16 +3,28 @@
 //Authors: Matúš Tomšík, Juraj Krasňanský
 /*****************************************************/
 
+#include <ros/package.h>
+
+#include "../../SGT_Utils.h"
 
 #include "../include/camera_cone_detection.h"
 
-CameraConeDetection::CameraConeDetection()
+CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle)
+  : signal_pub_(handle.advertise<std_msgs::Empty>("camera_ready", 1))
+  , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1))
+  , lidar_cone_pub_(handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1))
+  , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1))
+  , reset_odom_sub_(handle.subscribe("reset_odometry", 1, &CameraConeDetection::resetOdomCallback, this))
+#ifdef SGT_DEBUG_STATE
+  , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1))
+#endif
 {
+  loadParams(handle);
 }
 
 CameraConeDetection::~CameraConeDetection()
 {
-  if(record_video_svo_) zed_.disableRecording();
+  if(params_.record_video_svo) zed_.disableRecording();
 
   if (zed_.isOpened())
   {
@@ -20,27 +32,38 @@ CameraConeDetection::~CameraConeDetection()
     std::cout << "zed camera closed" << std::endl;
   }
   
-  if(record_video_) output_video_.release();
+  if(params_.record_video) output_video_.release();
 }
 
-void CameraConeDetection::setSignalPublisher(ros::Publisher signalPublisher)
+void CameraConeDetection::loadParams(const ros::NodeHandle& nh)
 {
-  signal_pub_ = signalPublisher;
-}
+  const auto path_to_package = ros::package::getPath("camera_cone_detection");
+  std::string filename_temp;
+  
+  // Utils::loadParam(nh, "/obj_names_filename", &filename_temp);
+  // params_.names_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/cfg_filename", &filename_temp);
+  params_.cfg_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/weights_filename", &filename_temp);
+  params_.weights_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/output_video_filename", &filename_temp);
+  params_.out_video_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/output_svo_filename", &filename_temp);
+  params_.out_svo_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/input_stream", &filename_temp);
+  params_.in_svo_file = path_to_package + filename_temp;
 
-void CameraConeDetection::setConePublisher(ros::Publisher conePublisher)
-{
-  cone_pub_ = conePublisher;
-}
-
-void CameraConeDetection::setLidarConePublisher(ros::Publisher lidarConePublisher)
-{
-  lidar_cone_pub_ = lidarConePublisher;
-}
-
-void CameraConeDetection::setCarStatePublisher(ros::Publisher carStatePublisher)
-{
-  carstate_pub_ = carStatePublisher;
+  Utils::loadParam(nh, "/publish_carstate", false, &params_.publish_carstate);
+  Utils::loadParam(nh, "/camera_show", false, &params_.camera_show);
+  Utils::loadParam(nh, "/fake_lidar", false, &params_.fake_lidar);
+  Utils::loadParam(nh, "/console_show", false, &params_.console_show);
+  Utils::loadParam(nh, "/record_video", false, &params_.record_video);
+  Utils::loadParam(nh, "/record_video_svo", false, &params_.record_video_svo);
 }
 
 void CameraConeDetection::resetOdomCallback(const std_msgs::Empty::ConstPtr& msg)
@@ -102,7 +125,7 @@ CameraConeDetection::drawBoxes(cv::Mat mat_img, std::vector <bbox_t> result_vec,
     putText(mat_img, fps_str, cv::Point2f(10, 20), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2, cv::Scalar(50, 255, 0), 2);
   }
 
-  if(camera_show_) cv::imshow("window name", mat_img);
+  if(params_.camera_show) cv::imshow("window name", mat_img);
   cv::waitKey(3);
   return mat_img;
 }
@@ -254,11 +277,11 @@ cv::Mat CameraConeDetection::zedCapture3D(sl::Camera &zed)
 
 void CameraConeDetection::update()
 {
-  Detector detector(cfg_file_, weights_file_); //Darknet
-  // auto obj_names = objects_names_from_file(names_file);
+  Detector detector(params_.cfg_file, params_.weights_file); //Darknet
+  // auto obj_names = objects_names_from_file(params_.names_file);
 
-  std::string const file_ext = input_stream_.substr(input_stream_.find_last_of(".") + 1);
-  std::string const protocol = input_stream_.substr(0, 7);
+  std::string const file_ext = params_.in_svo_file.substr(params_.in_svo_file.find_last_of(".") + 1);
+  std::string const protocol = params_.in_svo_file.substr(0, 7);
 
   // get ZED SDK version
   int major_dll, minor_dll, patch_dll;
@@ -279,7 +302,7 @@ void CameraConeDetection::update()
   init_params.sdk_gpu_id = detector.cur_gpu_id;
   //init_params.camera_buffer_count_linux = 2;
 
-  if (file_ext == "svo") init_params.input.setFromSVOFile(input_stream_.c_str());
+  if (file_ext == "svo") init_params.input.setFromSVOFile(params_.in_svo_file.c_str());
   
   sl::ERROR_CODE zed_open = zed_.open(init_params);
   if (zed_open != sl::ERROR_CODE::SUCCESS)
@@ -300,19 +323,19 @@ void CameraConeDetection::update()
 
   zed_.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO, 1);
 
-  if(record_video_svo_)
+  if(params_.record_video_svo)
   {
     sl::ERROR_CODE err;
-    err = zed_.enableRecording(sl::RecordingParameters(out_svofile_.c_str(), sl::SVO_COMPRESSION_MODE::H264));
+    err = zed_.enableRecording(sl::RecordingParameters(params_.out_svo_file.c_str(), sl::SVO_COMPRESSION_MODE::H264));
     if (err != sl::ERROR_CODE::SUCCESS)
     {
       std::cout <<"CAMERA_DETECTION_RECORD_VIDEO_SVO: " <<  sl::toString(err) << std::endl;
     }
   }
 
-  if (input_stream_.size() == 0) return;
+  if (params_.in_svo_file.size() == 0) return;
 
-  if(publish_carstate_)
+  if(params_.publish_carstate)
   {
     // Set parameters for Positional Tracking
     sl::PositionalTrackingParameters tracking_parameters;
@@ -322,12 +345,12 @@ void CameraConeDetection::update()
     sl::POSITIONAL_TRACKING_STATE tracking_state;
   }
 
-  if(record_video_)
+  if(params_.record_video)
   {
   #ifdef CV_VERSION_EPOCH // OpenCV 2.x
     output_video_.open(out_videofile_, CV_FOURCC('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
   #else
-    output_video_.open(out_videofile_, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
+    output_video_.open(params_.out_video_file, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
   #endif
   }
 
@@ -427,7 +450,7 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
       point2D.y = i.y_3d;
       cone.coords = point2D;
       
-      if(fake_lidar_) point2DArr.points.push_back(point2D);
+      if(params_.fake_lidar) point2DArr.points.push_back(point2D);
 
       std::string obj_name = obj_names[i.obj_id];
       if (i.obj_id == 0) //yellow_cone
@@ -442,9 +465,9 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
     }
     cone_pub_.publish(coneArr);
       
-    if(fake_lidar_) lidar_cone_pub_.publish(point2DArr);
+    if(params_.fake_lidar) lidar_cone_pub_.publish(point2DArr);
 
-    if(publish_carstate_)
+    if(params_.publish_carstate)
     {
       geometry_msgs::PoseWithCovarianceStamped carState;
       tracking_state = zed_.getPosition(camera_pose, sl::REFERENCE_FRAME::WORLD); //get actual position
@@ -504,14 +527,14 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
     }*/
 
 
-    if(camera_show_) drawBoxes(cur_frame, result_vec, obj_names);
+    if(params_.camera_show) drawBoxes(cur_frame, result_vec, obj_names);
     
-    if(record_video_)
+    if(params_.record_video)
     {
       drawBoxes(cur_frame, result_vec, obj_names);
       output_video_ << cur_frame;
     }
         
-    if(console_show_) showConsoleResult(result_vec, obj_names);
+    if(params_.console_show) showConsoleResult(result_vec, obj_names);
   }
 }

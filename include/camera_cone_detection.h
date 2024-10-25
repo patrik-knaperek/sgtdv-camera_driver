@@ -80,43 +80,9 @@ constexpr int TIME_PER_FRAME = 1000 / FPS;
 class CameraConeDetection
 {
 public:
-  CameraConeDetection();
+  explicit CameraConeDetection(ros::NodeHandle& nh);
 
   ~CameraConeDetection();
-
-  void setSignalPublisher(ros::Publisher signal_publisher);
-  void setConePublisher(ros::Publisher main_publisher);
-  void setFilenames(std::string names, std::string cfg, std::string weights, 
-                    std::string out, std::string out_svo, std::string in_stream)
-  {
-    names_file_ = names;
-    cfg_file_ = cfg;
-    weights_file_ = weights;
-    out_videofile_ = out;
-    out_svofile_ = out_svo;
-    input_stream_ = in_stream;
-  };
-
-  void setMacros(const bool carstate, const bool camera_show, const bool fake_lidar, const bool console_show, 
-                const bool record_video, const bool record_video_svo)
-  {
-    publish_carstate_ = carstate;
-    camera_show_ = camera_show;
-    fake_lidar_ = fake_lidar;
-    console_show_ = console_show;
-    record_video_ = record_video;
-    record_video_svo_ = record_video;
-  };
-
-#ifdef SGT_DEBUG_STATE
-  void setVisDebugPublisher(ros::Publisher vis_debug_pub) { vis_debug_pub_ = vis_debug_pub; }
-#endif
-
-  void setLidarConePublisher(ros::Publisher lidar_cone_pub);
-
-  void setCarStatePublisher(ros::Publisher carstate_pub);
-  void resetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
-
 
   void update();
 
@@ -131,13 +97,26 @@ public:
   };
 
 private:
-  std::string names_file_, cfg_file_, weights_file_, out_videofile_, out_svofile_;
-  bool publish_carstate_ = false, camera_show_ = false, fake_lidar_ = false, console_show_ = false,
-      record_video_ = false, record_video_svo_ = false;
+  void loadParams(const ros::NodeHandle& nh);
+  void resetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
 
-  //std::string input_stream_ = ros::package::getPath("camera_cone_detection") + "/Darknet_cone_detection/druha_jazda.svo";
-  std::string input_stream_ = "zed_camera";
-  sl::Camera zed_; // ZED-camera
+  struct Params
+  {
+    // std::string names_file;
+    std::string cfg_file;
+    std::string weights_file;
+    std::string out_video_file;
+    std::string out_svo_file;
+    std::string in_svo_file;
+    bool publish_carstate;
+    bool camera_show;
+    bool fake_lidar;
+    bool console_show;
+    bool record_video;
+    bool record_video_svo;
+  };
+  
+  sl::Camera zed_; // ZED-camera object
 
   cv::VideoWriter output_video_;
   float const thresh = 0.2;
@@ -146,6 +125,9 @@ private:
   ros::Publisher cone_pub_;
   ros::Publisher lidar_cone_pub_;
   ros::Publisher carstate_pub_;
+  ros::Subscriber reset_odom_sub_;
+
+  Params params_;
 
 #ifdef SGT_DEBUG_STATE
   ros::Publisher vis_debug_pub_;
