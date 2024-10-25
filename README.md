@@ -40,7 +40,7 @@ The following packages have to be built at first:
 
 In folder `ros_implementation/src/` run:
 ```
-$ catkin build camera_cone_detection
+$ catkin build camera_cone_detection -DCMAKE_BUILD_TYPE=Release
 ```
 
 ### Compilation configuration

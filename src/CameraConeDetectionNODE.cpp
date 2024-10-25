@@ -41,24 +41,25 @@ int main(int argc, char **argv) {
                                     pathToPackage + outSvoFilename,
                                     pathToPackage + inSvoFilename);
 
-    ros::Publisher conePublisher = handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1);
-    ros::Publisher signalPublisher = handle.advertise<std_msgs::Empty>("camera_ready", 1);
+    bool publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo;
+    handle.getParam("macros/publish_carstate", publish_carstate);
+    handle.getParam("macros/camera_show", camera_show);
+    handle.getParam("macros/fake_lidar", fake_lidar);
+    handle.getParam("macros/console_show", console_show);
+    handle.getParam("macros/record_video", record_video);
+    handle.getParam("macros/record_video_svo", record_video_svo);
+    cameraConeDetection.SetMacros(publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo);
+
+    cameraConeDetection.SetConePublisher(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1));
+    cameraConeDetection.SetSignalPublisher(handle.advertise<std_msgs::Empty>("camera_ready", 1));
     
-#ifdef CAMERA_DETECTION_FAKE_LIDAR
-    ros::Publisher lidarConePublisher = handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1);
-#endif//CAMERA_DETECTION_FAKE_LIDAR
+    if(fake_lidar) cameraConeDetection.SetLidarConePublisher(handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1));
 
-#ifdef CAMERA_DETECTION_CARSTATE
-    ros::Publisher carStatePublisher = handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1);
-    cameraConeDetection.SetCarStatePublisher(carStatePublisher);
-    ros::Subscriber resetOdomSubscriber = handle.subscribe("reset_odometry", 1, &CameraConeDetection::ResetOdomCallback, &cameraConeDetection);
-#endif//CAMERA_DETECTION_CARSTATE
-
-    cameraConeDetection.SetConePublisher(conePublisher);
-#ifdef CAMERA_DETECTION_FAKE_LIDAR
-    cameraConeDetection.SetLidarConePublisher(lidarConePublisher);
-#endif//CAMERA_DETECTION_FAKE_LIDAR
-    cameraConeDetection.SetSignalPublisher(signalPublisher);
+    if(publish_carstate)
+    {
+        cameraConeDetection.SetCarStatePublisher(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1));
+        ros::Subscriber resetOdomSubscriber = handle.subscribe("reset_odometry", 1, &CameraConeDetection::ResetOdomCallback, &cameraConeDetection);
+    }
 
 #ifdef SGT_DEBUG_STATE
     ros::Publisher cameraConeDetectionDebugStatePublisher = handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1);

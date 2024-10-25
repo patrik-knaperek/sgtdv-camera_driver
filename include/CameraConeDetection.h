@@ -10,7 +10,7 @@
 #include <sgtdv_msgs/ConeStampedArr.h>
 #include <sgtdv_msgs/ConeStamped.h>
 #include <sgtdv_msgs/Point2DStamped.h>
-#include <sgtdv_msgs/Point2DArr.h>
+#include <sgtdv_msgs/Point2DStampedArr.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sgtdv_msgs/DebugState.h>
 #include "../../SGT_Macros.h"
@@ -28,6 +28,7 @@
 #include <atomic>
 #include <mutex>         // std::mutex, std::unique_lock
 #include <cmath>
+#include <stdio.h>
 
 
 #include "yolo_v2_class.hpp"    // imported functions from DLL
@@ -96,23 +97,26 @@ public:
 
         filename = in_svofile;
 	};
+    void SetMacros(const bool carstate, const bool camera_show, const bool fake_lidar, const bool console_show, 
+        const bool record_video, const bool record_video_svo)
+        {
+            publish_carstate_ = carstate;
+            camera_show_ = camera_show;
+            fake_lidar_ = fake_lidar;
+            console_show_ = console_show;
+            record_video_ = record_video;
+            record_video_svo_ = record_video;
+        };
 
 #ifdef SGT_DEBUG_STATE
     void SetVisDebugPublisher(ros::Publisher visDebugPublisher) { m_visDebugPublisher = visDebugPublisher; }
 #endif
 
-#ifdef CAMERA_DETECTION_FAKE_LIDAR
-
     void SetLidarConePublisher(ros::Publisher lidarConePublisher);
-
-#endif//CAMERA_DETECTION_FAKE_LIDAR
-#ifdef CAMERA_DETECTION_CARSTATE
 
     void SetCarStatePublisher(ros::Publisher carStatePublisher);
     void ResetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
 
-
-#endif//CAMERA_DETECTION_CARSTATE
 
     void Do();
 
@@ -128,6 +132,8 @@ public:
 
 private:
     std::string names_file, cfg_file, weights_file, out_videofile, out_svofile, in_svofile;
+    bool publish_carstate_ = false, camera_show_ = false, fake_lidar_ = false, console_show_ = false,
+        record_video_ = false, record_video_svo_ = false;
     
     //std::string filename = ros::package::getPath("camera_cone_detection") + "/Darknet_cone_detection/druha_jazda.svo";
     std::string filename = "zed_camera";
@@ -138,12 +144,8 @@ private:
 
     ros::Publisher m_signalPublisher;
     ros::Publisher m_conePublisher;
-#ifdef CAMERA_DETECTION_FAKE_LIDAR
     ros::Publisher m_lidarConePublisher;
-#endif//CAMERA_DETECTION_FAKE_LIDAR
-#ifdef CAMERA_DETECTION_CARSTATE
     ros::Publisher m_carStatePublisher;
-#endif//CAMERA_DETECTION_CARSTATE
 
 #ifdef SGT_DEBUG_STATE
     ros::Publisher m_visDebugPublisher;
