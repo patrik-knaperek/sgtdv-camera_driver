@@ -42,12 +42,12 @@ int main(int argc, char **argv) {
                                     pathToPackage + inSvoFilename);
 
     bool publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo;
-    handle.getParam("macros/publish_carstate", publish_carstate);
-    handle.getParam("macros/camera_show", camera_show);
-    handle.getParam("macros/fake_lidar", fake_lidar);
-    handle.getParam("macros/console_show", console_show);
-    handle.getParam("macros/record_video", record_video);
-    handle.getParam("macros/record_video_svo", record_video_svo);
+    handle.getParam("/publish_carstate", publish_carstate);
+    handle.getParam("/camera_show", camera_show);
+    handle.getParam("/fake_lidar", fake_lidar);
+    handle.getParam("/console_show", console_show);
+    handle.getParam("/record_video", record_video);
+    handle.getParam("/record_video_svo", record_video_svo);
     cameraConeDetection.SetMacros(publish_carstate, camera_show, fake_lidar, console_show, record_video, record_video_svo);
 
     cameraConeDetection.SetConePublisher(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1));
