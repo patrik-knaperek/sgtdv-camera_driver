@@ -56,12 +56,16 @@ cv::Mat
 CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
                                 int current_det_fps = -1, int current_cap_fps = -1) {
     for (auto &i : result_vec) {
-        cv::Scalar color = {0, 0, 255};
-        if (i.obj_id == 0) {
-            color = {0, 255, 255};
-        } else if (i.obj_id == 1) {
-            color = {255, 0, 0};
+        cv::Scalar color = {255, 255, 255}; // BGR
+        switch(i.obj_id)
+        {
+            case CONE_CLASSES::YELLOW       : color = {0, 255, 255}; break;
+            case CONE_CLASSES::BLUE         : color = {255, 0, 0}; break;
+            case CONE_CLASSES::ORANGE_SMALL : color = {0, 120, 255}; break;
+            case CONE_CLASSES::ORANGE_BIG   : color = {0, 80, 255}; break;
+            default                         : break;
         }
+        
         cv::rectangle(mat_img, cv::Rect(i.x, i.y, i.w, i.h), color, 2);
         if (obj_names.size() > i.obj_id) {
             std::string obj_name = obj_names[i.obj_id];
@@ -73,8 +77,7 @@ CameraConeDetection::draw_boxes(cv::Mat mat_img, std::vector <bbox_t> result_vec
             std::string coords_3d;
             if (!std::isnan(i.z_3d)) {
                 std::stringstream ss;
-                ss << std::fixed << std::setprecision(2) << "x:" << i.x_3d * 1000 << "mm y:" << 		i.y_3d * 1000 << "mm z:" << i.z_3d * 1000
-                   << "mm ";
+                ss << std::fixed << std::setprecision(3) << "x:" << i.x_3d << " y:" << 		i.y_3d << " z:" << i.z_3d;
                 coords_3d = ss.str();
                 cv::Size const text_size_3d = getTextSize(ss.str(), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, 1, 0);
                 int const max_width_3d = (text_size_3d.width > i.w + 2) ? text_size_3d.width : (i.w + 2);
@@ -326,7 +329,7 @@ void CameraConeDetection::Do()
 
 #ifdef SGT_DEBUG_STATE
         state.workingState = 0;
-        state.stamp = ros::Time::now()
+        state.stamp = ros::Time::now();
         state.numOfCones = static_cast<uint32_t>(m_numOfDetectedCones);
         m_visDebugPublisher.publish(state);
 #endif

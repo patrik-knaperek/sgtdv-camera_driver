@@ -118,6 +118,14 @@ public:
 
     void predict(Detector &detector, sl::MODEL &cam_model);
 
+    enum CONE_CLASSES
+    {
+        YELLOW,
+        BLUE,
+        ORANGE_SMALL,
+        ORANGE_BIG
+    };
+
 private:
     std::string names_file, cfg_file, weights_file, out_videofile, out_svofile, in_svofile;
     

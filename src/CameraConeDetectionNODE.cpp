@@ -43,8 +43,6 @@ int main(int argc, char **argv) {
 
     ros::Publisher conePublisher = handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1);
     ros::Publisher signalPublisher = handle.advertise<std_msgs::Empty>("camera_ready", 1);
-
-    ros::Subscriber resetOdomSubscriber = handle.subscribe("reset_odometry", 1, &CameraConeDetection::ResetOdomCallback, &cameraConeDetection);
     
 #ifdef CAMERA_DETECTION_FAKE_LIDAR
     ros::Publisher lidarConePublisher = handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1);
@@ -53,6 +51,7 @@ int main(int argc, char **argv) {
 #ifdef CAMERA_DETECTION_CARSTATE
     ros::Publisher carStatePublisher = handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1);
     cameraConeDetection.SetCarStatePublisher(carStatePublisher);
+    ros::Subscriber resetOdomSubscriber = handle.subscribe("reset_odometry", 1, &CameraConeDetection::ResetOdomCallback, &cameraConeDetection);
 #endif//CAMERA_DETECTION_CARSTATE
 
     cameraConeDetection.SetConePublisher(conePublisher);
