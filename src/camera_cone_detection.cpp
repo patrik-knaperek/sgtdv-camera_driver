@@ -12,9 +12,7 @@
 CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle, const Params& params)
   : detector_(params.cfg_file, params.weights_file)
   , params_(params)
-  , signal_pub_(handle.advertise<std_msgs::Empty>("camera_ready", 1))
   , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1))
-  , lidar_cone_pub_(handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1))
   , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1))
   , reset_odom_sub_(handle.subscribe("reset_odometry", 1, &CameraConeDetection::resetOdomCallback, this))
 #ifdef SGT_DEBUG_STATE
@@ -380,9 +378,6 @@ void CameraConeDetection::update()
       cur_frame = cv::Mat(cur_frame.size(), CV_8UC3);
     }
 
-    //sync with LidarConeDetection
-    signal_pub_.publish(empty);
-
     std::vector <bbox_t> result_vec = detector_.detect(cur_frame, thresh);
     
     // auto s = std::chrono::steady_clock::now();
@@ -410,8 +405,6 @@ void CameraConeDetection::update()
       point2D.y = i.y_3d;
       cone.coords = point2D;
       
-      if(params_.fake_lidar) point2DArr.points.push_back(point2D);
-
       std::string obj_name = obj_names_[i.obj_id];
       if (i.obj_id == 0) //yellow_cone
         cone.color = 'y';
@@ -425,8 +418,6 @@ void CameraConeDetection::update()
     }
     cone_pub_.publish(coneArr);
       
-    if(params_.fake_lidar) lidar_cone_pub_.publish(point2DArr);
-
     if(params_.publish_carstate)
     {
       geometry_msgs::PoseWithCovarianceStamped carState;

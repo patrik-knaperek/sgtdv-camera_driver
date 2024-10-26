@@ -161,9 +161,7 @@ private:
 
   Params params_;
 
-  ros::Publisher signal_pub_;
   ros::Publisher cone_pub_;
-  ros::Publisher lidar_cone_pub_;
   ros::Publisher carstate_pub_;
   ros::Subscriber reset_odom_sub_;
 
