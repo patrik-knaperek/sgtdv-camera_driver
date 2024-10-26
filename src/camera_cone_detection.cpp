@@ -9,8 +9,10 @@
 
 #include "../include/camera_cone_detection.h"
 
-CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle)
-  : signal_pub_(handle.advertise<std_msgs::Empty>("camera_ready", 1))
+CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle, const Params& params)
+  : detector_(params.cfg_file, params.weights_file)
+  , params_(params)
+  , signal_pub_(handle.advertise<std_msgs::Empty>("camera_ready", 1))
   , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1))
   , lidar_cone_pub_(handle.advertise<sgtdv_msgs::Point2DStampedArr>("lidar_cones", 1))
   , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1))
@@ -19,7 +21,7 @@ CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle)
   , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1))
 #endif
 {
-  loadParams(handle);
+  initialize();
 }
 
 CameraConeDetection::~CameraConeDetection()
@@ -29,46 +31,108 @@ CameraConeDetection::~CameraConeDetection()
   if (zed_.isOpened())
   {
     zed_.close();
-    std::cout << "zed camera closed" << std::endl;
+    ROS_INFO("zed camera closed");
   }
   
   if(params_.record_video) output_video_.release();
 }
 
-void CameraConeDetection::loadParams(const ros::NodeHandle& nh)
-{
-  const auto path_to_package = ros::package::getPath("camera_cone_detection");
-  std::string filename_temp;
-  
-  // Utils::loadParam(nh, "/obj_names_filename", &filename_temp);
-  // params_.names_file = path_to_package + filename_temp;
-  
-  Utils::loadParam(nh, "/cfg_filename", &filename_temp);
-  params_.cfg_file = path_to_package + filename_temp;
-  
-  Utils::loadParam(nh, "/weights_filename", &filename_temp);
-  params_.weights_file = path_to_package + filename_temp;
-  
-  Utils::loadParam(nh, "/output_video_filename", &filename_temp);
-  params_.out_video_file = path_to_package + filename_temp;
-  
-  Utils::loadParam(nh, "/output_svo_filename", &filename_temp);
-  params_.out_svo_file = path_to_package + filename_temp;
-  
-  Utils::loadParam(nh, "/input_stream", &filename_temp);
-  params_.in_svo_file = path_to_package + filename_temp;
-
-  Utils::loadParam(nh, "/publish_carstate", false, &params_.publish_carstate);
-  Utils::loadParam(nh, "/camera_show", false, &params_.camera_show);
-  Utils::loadParam(nh, "/fake_lidar", false, &params_.fake_lidar);
-  Utils::loadParam(nh, "/console_show", false, &params_.console_show);
-  Utils::loadParam(nh, "/record_video", false, &params_.record_video);
-  Utils::loadParam(nh, "/record_video_svo", false, &params_.record_video_svo);
-}
-
 void CameraConeDetection::resetOdomCallback(const std_msgs::Empty::ConstPtr& msg)
 {
   zed_.resetPositionalTracking(sl::Transform(sl::Matrix4f::identity()));
+}
+
+void CameraConeDetection::initialize(void)
+{  
+  getObjectsNamesFromFile();
+  if (obj_names_.size() == 0)
+  {
+    ROS_ERROR("Unable to obtain object names.");
+    ros::shutdown();
+    return;
+  }
+
+  // get ZED SDK version
+  int major_dll, minor_dll, patch_dll;
+  getZEDSDKBuildVersion(major_dll, minor_dll, patch_dll);
+  if (major_dll < 3)
+  {
+    ROS_ERROR("SUPPORT ONLY SDK 3.*");
+    ros::shutdown();
+    return;
+  }
+
+  // init zed camera
+  sl::InitParameters init_params;
+  init_params.depth_minimum_distance = 1.7;
+  init_params.depth_mode = sl::DEPTH_MODE::ULTRA;
+  init_params.camera_resolution = sl::RESOLUTION::HD720;// sl::RESOLUTION::HD1080, sl::RESOLUTION::HD720
+  init_params.coordinate_units = sl::UNIT::METER;
+  init_params.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;  /*< Right-Handed with Z pointing up and X forward. Used in ROS (REP 103). */
+  init_params.sdk_cuda_ctx = (CUcontext) detector_.get_cuda_context();//ak to bude nadavat na CUDNN tak treba zakomentova/odkomentovat
+  init_params.sdk_gpu_id = detector_.cur_gpu_id;
+  //init_params.camera_buffer_count_linux = 2;
+
+  /* detect SVO input type demand */
+  if (params_.in_svo_file.size() == 0)
+  {
+    ROS_ERROR("Parameter \"input_stream\" must not be empty!");
+    ros::shutdown();
+    return;
+  }
+  std::string const file_ext = params_.in_svo_file.substr(params_.in_svo_file.find_last_of(".") + 1);
+  if (file_ext == "svo") init_params.input.setFromSVOFile(params_.in_svo_file.c_str());
+  
+  /* open input stream */
+  sl::ERROR_CODE zed_open = zed_.open(init_params);
+  if (zed_open != sl::ERROR_CODE::SUCCESS)
+  {
+    ROS_ERROR_STREAM("ZED OPEN ERROR: " << zed_open);
+    ros::shutdown();
+    return;
+  }
+
+  if (!zed_.isOpened())
+  {
+    ROS_ERROR(" Error: ZED Camera should be connected to USB 3.0. And ZED_SDK should be installed. \n");
+    ros::shutdown();
+    return;
+  }
+
+  // Check camera model
+  sl::MODEL cam_model = zed_.getCameraInformation().camera_model;
+
+  /* set additional camera settings */
+  zed_.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO, 1);
+
+  /* enable SVO output recording */
+  if(params_.record_video_svo)
+  {
+    sl::ERROR_CODE err 
+      = zed_.enableRecording(sl::RecordingParameters(params_.out_svo_file.c_str(), sl::SVO_COMPRESSION_MODE::H264));
+    if (err != sl::ERROR_CODE::SUCCESS)
+    {
+      ROS_ERROR_STREAM("CAMERA_DETECTION_RECORD_VIDEO_SVO: " <<  sl::toString(err));
+    }
+  }
+
+  if(params_.publish_carstate)
+  {
+    // Set parameters for Positional Tracking
+    sl::PositionalTrackingParameters tracking_parameters;
+    tracking_parameters.enable_area_memory = false; //disable to use pose_covariance
+    zed_.enablePositionalTracking(tracking_parameters);
+  }
+
+  if(params_.record_video)
+  {
+  #ifdef CV_VERSION_EPOCH // OpenCV 2.x
+    output_video_.open(out_videofile_, CV_FOURCC('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
+  #else
+    output_video_.open(params_.out_video_file, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), 
+                      true);
+  #endif
+  }
 }
 
 cv::Mat
@@ -130,14 +194,21 @@ CameraConeDetection::drawBoxes(cv::Mat mat_img, std::vector <bbox_t> result_vec,
   return mat_img;
 }
 
-//std::vector<std::string> CameraConeDetection::objects_names_from_file(std::string const input_stream) {
-//	std::ifstream file(input_stream);
-//	std::vector<std::string> file_lines;
-//	if (!file.is_open()) return file_lines;
-//	for(std::string line; file >> line;) file_lines.push_back(line);
-//	std::cout << "object names loaded \n";
-//	return file_lines;
-//}
+void CameraConeDetection::getObjectsNamesFromFile(void)
+{
+	std::ifstream file(params_.names_file);
+	if (!file.is_open())
+  {
+    ROS_ERROR_STREAM("Could not open file " << params_.names_file);
+    ros::shutdown();
+    return;
+  }
+
+	for(std::string line; file >> line;)
+    obj_names_.push_back(line);
+	
+  ROS_INFO("object names loaded");	
+}
 
 void CameraConeDetection::showConsoleResult(std::vector<bbox_t> const result_vec, 
                                               std::vector<std::string> const obj_names, int frame_id = -1)
@@ -277,115 +348,12 @@ cv::Mat CameraConeDetection::zedCapture3D(sl::Camera &zed)
 
 void CameraConeDetection::update()
 {
-  Detector detector(params_.cfg_file, params_.weights_file); //Darknet
-  // auto obj_names = objects_names_from_file(params_.names_file);
-
-  std::string const file_ext = params_.in_svo_file.substr(params_.in_svo_file.find_last_of(".") + 1);
-  std::string const protocol = params_.in_svo_file.substr(0, 7);
-
-  // get ZED SDK version
-  int major_dll, minor_dll, patch_dll;
-  getZEDSDKBuildVersion(major_dll, minor_dll, patch_dll);
-  if (major_dll < 3)
-  {
-    std::cerr << "SUPPORT ONLY SDK 3.*" << std::endl;
-  }
-
-  // init zed camera
-  sl::InitParameters init_params;
-  init_params.depth_minimum_distance = 1.7;
-  init_params.depth_mode = sl::DEPTH_MODE::ULTRA;
-  init_params.camera_resolution = sl::RESOLUTION::HD720;// sl::RESOLUTION::HD1080, sl::RESOLUTION::HD720
-  init_params.coordinate_units = sl::UNIT::METER;
-  init_params.coordinate_system = sl::COORDINATE_SYSTEM::RIGHT_HANDED_Z_UP_X_FWD;  /*< Right-Handed with Z pointing up and X forward. Used in ROS (REP 103). */
-  init_params.sdk_cuda_ctx = (CUcontext) detector.get_cuda_context();//ak to bude nadavat na CUDNN tak treba zakomentova/odkomentovat
-  init_params.sdk_gpu_id = detector.cur_gpu_id;
-  //init_params.camera_buffer_count_linux = 2;
-
-  if (file_ext == "svo") init_params.input.setFromSVOFile(params_.in_svo_file.c_str());
-  
-  sl::ERROR_CODE zed_open = zed_.open(init_params);
-  if (zed_open != sl::ERROR_CODE::SUCCESS)
-  {
-    std::cout << "ZED OPEN ERROR: " << zed_open << std::endl;
-    return;
-  }
-
-  if (!zed_.isOpened())
-  {
-    std::cout << " Error: ZED Camera should be connected to USB 3.0. And ZED_SDK should be installed. \n";
-    getchar();
-    return;
-  }
-
-  // Check camera model
-  sl::MODEL cam_model = zed_.getCameraInformation().camera_model;
-
-  zed_.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO, 1);
-
-  if(params_.record_video_svo)
-  {
-    sl::ERROR_CODE err;
-    err = zed_.enableRecording(sl::RecordingParameters(params_.out_svo_file.c_str(), sl::SVO_COMPRESSION_MODE::H264));
-    if (err != sl::ERROR_CODE::SUCCESS)
-    {
-      std::cout <<"CAMERA_DETECTION_RECORD_VIDEO_SVO: " <<  sl::toString(err) << std::endl;
-    }
-  }
-
-  if (params_.in_svo_file.size() == 0) return;
-
-  if(params_.publish_carstate)
-  {
-    // Set parameters for Positional Tracking
-    sl::PositionalTrackingParameters tracking_parameters;
-    tracking_parameters.enable_area_memory = false; //disable to use pose_covariance
-    zed_.enablePositionalTracking(tracking_parameters);
-    sl::Pose camera_pose;
-    sl::POSITIONAL_TRACKING_STATE tracking_state;
-  }
-
-  if(params_.record_video)
-  {
-  #ifdef CV_VERSION_EPOCH // OpenCV 2.x
-    output_video_.open(out_videofile_, CV_FOURCC('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
-  #else
-    output_video_.open(params_.out_video_file, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
-  #endif
-  }
-
-  ros::Rate loop_rate(FPS);
-  while (ros::ok())
-  {
   #ifdef SGT_DEBUG_STATE
     sgtdv_msgs::DebugState state;
     state.stamp = ros::Time::now();
     state.working_state = 1;
     vis_debug_pub_.publish(state);
   #endif
-    ros::spinOnce();
-
-    auto start = std::chrono::steady_clock::now();
-    predict(detector, cam_model);
-    auto finish = std::chrono::steady_clock::now();
-    auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
-    // int timeDiff = TIME_PER_FRAME - timePerFrame;
-    ROS_DEBUG_STREAM("Prediction time: " << timePerFrame);
-
-  #ifdef SGT_DEBUG_STATE
-    state.working_state = 0;
-    state.stamp = ros::Time::now();
-    state.num_of_cones = static_cast<uint32_t>(num_of_detected_cones_);
-    vis_debug_pub_.publish(state);
-  #endif
-
-  loop_rate.sleep();
-  }
-}
-
-void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
-{
-  std::vector <std::string> obj_names = {"yellow_cone", "blue_cone", "orange_cone_small", "orange_cone_big"};
 
   ros::Time capture_time;
   cv::Mat cur_frame;
@@ -399,8 +367,6 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
   sl::Pose camera_pose;
   sl::POSITIONAL_TRACKING_STATE tracking_state;
   
-  auto start = std::chrono::steady_clock::now();
-  auto finish = start;
   //TODO function body
   if (zed_.grab() == sl::ERROR_CODE::SUCCESS)
   {
@@ -417,13 +383,7 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
     //sync with LidarConeDetection
     signal_pub_.publish(empty);
 
-    
-
-    auto start = std::chrono::steady_clock::now();
-    std::vector <bbox_t> result_vec = detector.detect(cur_frame, thresh);
-    finish = std::chrono::steady_clock::now();
-    auto timePerFrame = std::chrono::duration_cast<std::chrono::milliseconds>(finish - start).count();
-    ROS_DEBUG_STREAM("Detection time: " << timePerFrame);
+    std::vector <bbox_t> result_vec = detector_.detect(cur_frame, thresh);
     
     // auto s = std::chrono::steady_clock::now();
     result_vec = get_3d_coordinates(result_vec, zed_cloud);
@@ -452,7 +412,7 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
       
       if(params_.fake_lidar) point2DArr.points.push_back(point2D);
 
-      std::string obj_name = obj_names[i.obj_id];
+      std::string obj_name = obj_names_[i.obj_id];
       if (i.obj_id == 0) //yellow_cone
         cone.color = 'y';
       if (i.obj_id == 1) //blue_cone
@@ -527,14 +487,22 @@ void CameraConeDetection::predict(Detector &detector, sl::MODEL &cam_model)
     }*/
 
 
-    if(params_.camera_show) drawBoxes(cur_frame, result_vec, obj_names);
+    if(params_.camera_show) drawBoxes(cur_frame, result_vec, obj_names_);
     
     if(params_.record_video)
     {
-      drawBoxes(cur_frame, result_vec, obj_names);
+      drawBoxes(cur_frame, result_vec, obj_names_);
       output_video_ << cur_frame;
     }
         
-    if(params_.console_show) showConsoleResult(result_vec, obj_names);
+    if(params_.console_show) showConsoleResult(result_vec, obj_names_);
   }
+    
+
+  #ifdef SGT_DEBUG_STATE
+    state.working_state = 0;
+    state.stamp = ros::Time::now();
+    state.num_of_cones = static_cast<uint32_t>(num_of_detected_cones_);
+    vis_debug_pub_.publish(state);
+  #endif
 }

@@ -14,6 +14,7 @@
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sgtdv_msgs/DebugState.h>
 #include "../../SGT_Macros.h"
+#include "../../SGT_Utils.h"
 #include <chrono>
 
 
@@ -80,29 +81,9 @@ constexpr int TIME_PER_FRAME = 1000 / FPS;
 class CameraConeDetection
 {
 public:
-  explicit CameraConeDetection(ros::NodeHandle& nh);
-
-  ~CameraConeDetection();
-
-  void update();
-
-  void predict(Detector &detector, sl::MODEL &cam_model);
-
-  enum CONE_CLASSES
-  {
-    YELLOW,
-    BLUE,
-    ORANGE_SMALL,
-    ORANGE_BIG
-  };
-
-private:
-  void loadParams(const ros::NodeHandle& nh);
-  void resetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
-
   struct Params
   {
-    // std::string names_file;
+    std::string names_file;
     std::string cfg_file;
     std::string weights_file;
     std::string out_video_file;
@@ -110,24 +91,81 @@ private:
     std::string in_svo_file;
     bool publish_carstate;
     bool camera_show;
-    bool fake_lidar;
     bool console_show;
     bool record_video;
     bool record_video_svo;
   };
+
+  static Params loadParams(const ros::NodeHandle& nh)
+  {
+    const auto path_to_package = ros::package::getPath("camera_cone_detection");
+    std::string filename_temp;
+    Params params;
+    
+    Utils::loadParam(nh, "/obj_names_filename", &filename_temp);
+    params.names_file = path_to_package + filename_temp;
+    
+    Utils::loadParam(nh, "/cfg_filename", &filename_temp);
+    params.cfg_file = path_to_package + filename_temp;
+    
+    Utils::loadParam(nh, "/weights_filename", &filename_temp);
+    params.weights_file = path_to_package + filename_temp;
+    
+    Utils::loadParam(nh, "/output_video_filename", &filename_temp);
+    params.out_video_file = path_to_package + filename_temp;
+    
+    Utils::loadParam(nh, "/output_svo_filename", &filename_temp);
+    params.out_svo_file = path_to_package + filename_temp;
+    
+    Utils::loadParam(nh, "/input_stream", &filename_temp);
+    params.in_svo_file = path_to_package + filename_temp;
+
+    Utils::loadParam(nh, "/publish_carstate", false, &params.publish_carstate);
+    Utils::loadParam(nh, "/camera_show", false, &params.camera_show);
+    Utils::loadParam(nh, "/console_show", false, &params.console_show);
+    Utils::loadParam(nh, "/record_video", false, &params.record_video);
+    Utils::loadParam(nh, "/record_video_svo", false, &params.record_video_svo);
+
+  return params;
+  };
+
+public:
+  explicit CameraConeDetection(ros::NodeHandle& nh, const Params& params);
+
+  ~CameraConeDetection();
+
+  void update();
+
+private:
+
+  void initialize(void);
+  
+  void resetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
+  
+  enum CONE_CLASSES
+  {
+    YELLOW,
+    BLUE,
+    ORANGE_SMALL,
+    ORANGE_BIG
+  };
+  
+  Detector detector_; // Darknet NN object
+  std::vector<std::string> obj_names_;
   
   sl::Camera zed_; // ZED-camera object
+  sl::MODEL cam_model_;
 
   cv::VideoWriter output_video_;
   float const thresh = 0.2;
+
+  Params params_;
 
   ros::Publisher signal_pub_;
   ros::Publisher cone_pub_;
   ros::Publisher lidar_cone_pub_;
   ros::Publisher carstate_pub_;
   ros::Subscriber reset_odom_sub_;
-
-  Params params_;
 
 #ifdef SGT_DEBUG_STATE
   ros::Publisher vis_debug_pub_;
@@ -149,5 +187,5 @@ private:
 
   cv::Mat drawBoxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
                       int current_det_fps, int current_cap_fps);
-  // std::vector<std::string> objects_names_from_file(std::string const input_stream);
+  void getObjectsNamesFromFile(void);
 };
