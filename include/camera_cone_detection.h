@@ -76,7 +76,6 @@
 #endif    // CV_VERSION_EPOCH
 
 constexpr int FPS = 20;
-constexpr int TIME_PER_FRAME = 1000 / FPS;
 
 class CameraConeDetection
 {
@@ -149,6 +148,8 @@ private:
     ORANGE_SMALL,
     ORANGE_BIG
   };
+
+  static constexpr float DETECT_TH = 0.2;
   
   Detector detector_; // Darknet NN object
   std::vector<std::string> obj_names_;
@@ -159,7 +160,6 @@ private:
   sl::SensorsData sensors_data_;
 
   cv::VideoWriter output_video_;
-  float const thresh = 0.2;
 
   Params params_;
 
@@ -172,20 +172,20 @@ private:
   size_t num_of_detected_cones_ = 0;
 #endif
 
-  float getMedian(std::vector<float> &v);
+  float getMedian(std::vector<float> &v) const;
 
-  std::vector <bbox_t> get_3d_coordinates(std::vector <bbox_t> bbox_vect, cv::Mat xyzrgba);
+  void get3dCoordinates(std::vector <bbox_t>* bbox_vect, const cv::Mat& xyzrgba) const;
 
-  cv::Mat slMat2cvMat(sl::Mat &input);
+  cv::Mat slMat2cvMat(const sl::Mat &input) const;
 
-  cv::Mat zedCaptureRGB(sl::Camera &zed);
+  cv::Mat zedCaptureRGB(void);
 
-  cv::Mat zedCapture3D(sl::Camera &zed);
+  cv::Mat zedCapture3D(void);
 
-  void
-  showConsoleResult(std::vector <bbox_t> const result_vec, std::vector <std::string> const obj_names, int frame_id);
+  void showConsoleResult(const std::vector <bbox_t>& result_vec) const;
 
-  cv::Mat drawBoxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
-                      int current_det_fps, int current_cap_fps);
+  void drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>& result_vec,
+                const int current_det_fps, const int current_cap_fps) const;
+  
   void getObjectsNamesFromFile(void);
 };

@@ -24,7 +24,8 @@ CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle, const Params& 
 
 CameraConeDetection::~CameraConeDetection()
 {
-  if(params_.record_video_svo) zed_.disableRecording();
+  if(params_.record_video_svo)
+    zed_.disableRecording();
 
   if (zed_.isOpened())
   {
@@ -133,217 +134,6 @@ void CameraConeDetection::initialize(void)
   }
 }
 
-cv::Mat
-CameraConeDetection::drawBoxes(cv::Mat mat_img, std::vector <bbox_t> result_vec, std::vector <std::string> obj_names,
-                                int current_det_fps = -1, int current_cap_fps = -1)
-{
-  for (auto &i : result_vec)
-  {
-    cv::Scalar color = {255, 255, 255}; // BGR
-    switch(i.obj_id)
-    {
-      case CONE_CLASSES::YELLOW       : color = {0, 255, 255}; break;
-      case CONE_CLASSES::BLUE         : color = {255, 0, 0}; break;
-      case CONE_CLASSES::ORANGE_SMALL : color = {0, 120, 255}; break;
-      case CONE_CLASSES::ORANGE_BIG   : color = {0, 80, 255}; break;
-      default                         : break;
-    }
-      
-    cv::rectangle(mat_img, cv::Rect(i.x, i.y, i.w, i.h), color, 2);
-    if (obj_names.size() > i.obj_id)
-    {
-      std::string obj_name = obj_names[i.obj_id];
-      if (i.track_id > 0) obj_name += " - " + std::to_string(i.track_id);
-      cv::Size const text_size = getTextSize(obj_name, cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2, 2, 0);
-      int max_width = (text_size.width > i.w + 2) ? text_size.width : (i.w + 2);
-      max_width = std::max(max_width, (int) i.w + 2);
-      //max_width = std::max(max_width, 283);
-      std::string coords_3d;
-      if (!std::isnan(i.z_3d))
-      {
-        std::stringstream ss;
-        ss << std::fixed << std::setprecision(3) << "x:" << i.x_3d << " y:" << 		i.y_3d << " z:" << i.z_3d;
-        coords_3d = ss.str();
-        cv::Size const text_size_3d = getTextSize(ss.str(), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, 1, 0);
-        int const max_width_3d = (text_size_3d.width > i.w + 2) ? text_size_3d.width : (i.w + 2);
-        if (max_width_3d > max_width) max_width = max_width_3d;
-      }
-
-      cv::rectangle(mat_img, cv::Point2f(std::max((int) i.x - 1, 0), std::max((int) i.y - 35, 0)),
-                    cv::Point2f(std::min((int) i.x + max_width, mat_img.cols - 1),
-                                std::min((int) i.y, mat_img.rows - 1)),
-                    color, CV_FILLED, 8, 0);
-      putText(mat_img, obj_name, cv::Point2f(i.x, i.y - 16), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2,
-              cv::Scalar(0, 0, 0), 2);
-      if (!coords_3d.empty())
-          putText(mat_img, coords_3d, cv::Point2f(i.x, i.y - 1), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8,
-                  cv::Scalar(0, 0, 0), 1);
-    }
-  }
-  if (current_det_fps >= 0 && current_cap_fps >= 0)
-  {
-    std::string fps_str = "FPS detection: " + std::to_string(current_det_fps) + "   FPS capture: "
-                        + std::to_string(current_cap_fps);
-    putText(mat_img, fps_str, cv::Point2f(10, 20), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2, cv::Scalar(50, 255, 0), 2);
-  }
-
-  if(params_.camera_show) cv::imshow("window name", mat_img);
-  cv::waitKey(3);
-  return mat_img;
-}
-
-void CameraConeDetection::getObjectsNamesFromFile(void)
-{
-	std::ifstream file(params_.names_file);
-	if (!file.is_open())
-  {
-    ROS_ERROR_STREAM("Could not open file " << params_.names_file);
-    ros::shutdown();
-    return;
-  }
-
-	for(std::string line; file >> line;)
-    obj_names_.push_back(line);
-	
-  ROS_INFO("object names loaded");	
-}
-
-void CameraConeDetection::showConsoleResult(std::vector<bbox_t> const result_vec, 
-                                              std::vector<std::string> const obj_names, int frame_id = -1)
-{
-  if (frame_id >= 0) std::cout << " Frame: " << frame_id << std::endl;
-  for (auto &i : result_vec)
-  {
-    if (obj_names.size() > i.obj_id) std::cout << obj_names[i.obj_id] << " - ";
-    std::string obj_name = obj_names[i.obj_id];
-    std::cout << "obj_name = " << obj_name << ",  x = " << i.x_3d << ", y = " << i.y_3d
-      << std::setprecision(3) << ", prob = " << i.prob << std::endl;
-  }
-}
-
-float CameraConeDetection::getMedian(std::vector<float> &v)
-{
-  size_t n = v.size() / 2;
-  std::nth_element(v.begin(), v.begin() + n, v.end());
-  return v[n];
-}
-
-std::vector <bbox_t> CameraConeDetection::get_3d_coordinates(std::vector <bbox_t> bbox_vect, cv::Mat xyzrgba)
-{
-  bool valid_measure;
-  int i, j;
-  const unsigned int R_max_global = 10;
-
-  std::vector <bbox_t> bbox3d_vect;
-
-  for (auto &cur_box : bbox_vect)
-  {
-
-    const unsigned int obj_size = std::min(cur_box.w, cur_box.h);
-    const unsigned int R_max = std::min(R_max_global, obj_size / 2);
-    int center_i = cur_box.x + cur_box.w * 0.5f, center_j = cur_box.y + cur_box.h * 0.5f;
-
-    std::vector<float> x_vect, y_vect, z_vect;
-    for (int R = 0; R < R_max; R++)
-    {
-      for (int y = -R; y <= R; y++)
-      {
-        for (int x = -R; x <= R; x++)
-        {
-          i = center_i + x;
-          j = center_j + y;
-          sl::float4 out(NAN, NAN, NAN, NAN);
-          if (i >= 0 && i < xyzrgba.cols && j >= 0 && j < xyzrgba.rows)
-          {
-            cv::Vec4f &elem = xyzrgba.at<cv::Vec4f>(j, i);  // x,y,z,w
-            out.x = elem[0];
-            out.y = elem[1];
-            out.z = elem[2];
-            out.w = elem[3];
-          }
-          valid_measure = std::isfinite(out.z);
-          if (valid_measure)
-          {
-            x_vect.push_back(out.x);
-            y_vect.push_back(out.y);
-            z_vect.push_back(out.z);
-          }
-        }
-      }
-    }
-
-    if (x_vect.size() * y_vect.size() * z_vect.size() > 0)
-    {
-      cur_box.x_3d = getMedian(x_vect);
-      cur_box.y_3d = getMedian(y_vect);
-      cur_box.z_3d = getMedian(z_vect);
-    } 
-    else 
-    {
-      cur_box.x_3d = NAN;
-      cur_box.y_3d = NAN;
-      cur_box.z_3d = NAN;
-    }
-
-    bbox3d_vect.emplace_back(cur_box);
-  }
-
-  return bbox3d_vect;
-}
-
-
-cv::Mat CameraConeDetection::slMat2cvMat(sl::Mat &input)
-{
-  // Mapping between MAT_TYPE and CV_TYPE
-  int cv_type = -1;
-  switch (input.getDataType())
-  {
-    case sl::MAT_TYPE::F32_C1:
-      cv_type = CV_32FC1;
-      break;
-    case sl::MAT_TYPE::F32_C2:
-      cv_type = CV_32FC2;
-      break;
-    case sl::MAT_TYPE::F32_C3:
-      cv_type = CV_32FC3;
-      break;
-    case sl::MAT_TYPE::F32_C4:
-      cv_type = CV_32FC4;
-      break;
-    case sl::MAT_TYPE::U8_C1:
-      cv_type = CV_8UC1;
-      break;
-    case sl::MAT_TYPE::U8_C2:
-      cv_type = CV_8UC2;
-      break;
-    case sl::MAT_TYPE::U8_C3:
-      cv_type = CV_8UC3;
-      break;
-    case sl::MAT_TYPE::U8_C4:
-      cv_type = CV_8UC4;
-      break;
-    default:
-      break;
-  }
-  return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(sl::MEM::CPU));
-}
-
-cv::Mat CameraConeDetection::zedCaptureRGB(sl::Camera &zed)
-{
-  sl::Mat left;
-  zed.retrieveImage(left);
-  cv::Mat left_rgb;
-  cv::cvtColor(slMat2cvMat(left), left_rgb, cv::COLOR_RGBA2RGB);
-  return left_rgb;
-}
-
-cv::Mat CameraConeDetection::zedCapture3D(sl::Camera &zed)
-{
-  sl::Mat cur_cloud;
-  zed.retrieveMeasure(cur_cloud, sl::MEASURE::XYZ);
-  return slMat2cvMat(cur_cloud).clone();
-}
-
 void CameraConeDetection::update()
 {
   #ifdef SGT_DEBUG_STATE
@@ -356,16 +146,16 @@ void CameraConeDetection::update()
   if (zed_.grab() == sl::ERROR_CODE::SUCCESS)
   {
     const auto capture_time = ros::Time::now();
-    auto cur_frame = zedCaptureRGB(zed_);
-    const auto zed_cloud = zedCapture3D(zed_);
+    auto cur_frame = zedCaptureRGB();
+    const auto zed_cloud = zedCapture3D();
     if (cur_frame.empty())
     {
       ROS_WARN_STREAM("exit_flag: detection_data.cap_frame.size = " << cur_frame.size());
       cur_frame = cv::Mat(cur_frame.size(), CV_8UC3);
     }
 
-    std::vector <bbox_t> result_vec = detector_.detect(cur_frame, thresh);
-    result_vec = get_3d_coordinates(result_vec, zed_cloud);
+    std::vector <bbox_t> result_vec = detector_.detect(cur_frame, DETECT_TH);
+    get3dCoordinates(&result_vec, zed_cloud);
       
   #ifdef SGT_DEBUG_STATE
     num_of_detected_cones_ = result_vec.size();
@@ -446,7 +236,7 @@ void CameraConeDetection::update()
 
     if(params_.camera_show || params_.record_video)
     {
-      drawBoxes(cur_frame, result_vec, obj_names_);
+      drawBoxes(&cur_frame, result_vec);
 
       if(params_.record_video)
       {
@@ -454,7 +244,7 @@ void CameraConeDetection::update()
       }
     }
 
-    if(params_.console_show) showConsoleResult(result_vec, obj_names_);
+    if(params_.console_show) showConsoleResult(result_vec);
   }
     
   #ifdef SGT_DEBUG_STATE
@@ -463,4 +253,201 @@ void CameraConeDetection::update()
     state.num_of_cones = static_cast<uint32_t>(num_of_detected_cones_);
     vis_debug_pub_.publish(state);
   #endif
+}
+
+void CameraConeDetection::drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>& result_vec,
+                                    const int current_det_fps = -1, const int current_cap_fps = -1) const
+{
+  for (const auto &i : result_vec)
+  {
+    /* set rectangle color by cone class ID */
+    cv::Scalar color = {255, 255, 255}; // BGR
+    switch(i.obj_id)
+    {
+      case CONE_CLASSES::YELLOW       : color = {0, 255, 255}; break;
+      case CONE_CLASSES::BLUE         : color = {255, 0, 0}; break;
+      case CONE_CLASSES::ORANGE_SMALL : color = {0, 120, 255}; break;
+      case CONE_CLASSES::ORANGE_BIG   : color = {0, 80, 255}; break;
+      default                         : break;
+    }
+      
+    /* create bounding box visualization */
+    cv::rectangle(*mat_img, cv::Rect(i.x, i.y, i.w, i.h), color, 2);
+    if (obj_names_.size() > i.obj_id)
+    { /* write object name */
+      std::string obj_name = obj_names_[i.obj_id];
+      if (i.track_id > 0) obj_name += " - " + std::to_string(i.track_id);
+      
+      cv::Size const text_size = cv::getTextSize(obj_name, cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2, 2, 0);
+      int max_width = std::max(text_size.width, static_cast<int>(i.w + 2));
+      
+      /* write cone coords */
+      std::string coords_3d;
+      if (!std::isnan(i.z_3d))
+      {
+        std::stringstream ss;
+        ss << std::fixed << std::setprecision(3) << "x:" << i.x_3d << " y:" << i.y_3d << " z:" << i.z_3d;
+        coords_3d = ss.str();
+        const cv::Size text_size_3d = getTextSize(coords_3d, cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8, 1, 0);
+        const int max_width_3d = std::max(text_size_3d.width, static_cast<int>(i.w + 2));
+        max_width = std::max(max_width, max_width_3d);
+      }
+
+      cv::rectangle(*mat_img, cv::Point2f(std::max(static_cast<int>(i.x) - 1, 0),
+                                          std::max(static_cast<int>(i.y) - 35, 0)),
+                    cv::Point2f(std::min(static_cast<int>(i.x) + max_width, mat_img->cols - 1),
+                                std::min(static_cast<int>(i.y), mat_img->rows - 1)),
+                    color, CV_FILLED, 8, 0);
+      cv::putText(*mat_img, obj_name, cv::Point2f(i.x, i.y - 16), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2,
+              cv::Scalar(0, 0, 0), 2);
+      if (!coords_3d.empty())
+          cv::putText(*mat_img, coords_3d, cv::Point2f(i.x, i.y - 1), cv::FONT_HERSHEY_COMPLEX_SMALL, 0.8,
+                  cv::Scalar(0, 0, 0), 1);
+    }
+  }
+  
+  if (current_det_fps >= 0 && current_cap_fps >= 0)
+  {
+    std::string fps_str = "FPS detection: " + std::to_string(current_det_fps) + "   FPS capture: "
+                        + std::to_string(current_cap_fps);
+    putText(*mat_img, fps_str, cv::Point2f(10, 20), cv::FONT_HERSHEY_COMPLEX_SMALL, 1.2, cv::Scalar(50, 255, 0), 2);
+  }
+
+  if(params_.camera_show)
+    cv::imshow("window name", *mat_img);
+  cv::waitKey(3);
+}
+
+void CameraConeDetection::getObjectsNamesFromFile(void)
+{
+	std::ifstream file(params_.names_file);
+	if (!file.is_open())
+  {
+    ROS_ERROR_STREAM("Could not open file " << params_.names_file);
+    ros::shutdown();
+    return;
+  }
+
+	for(std::string line; file >> line;)
+    obj_names_.push_back(line);
+	
+  ROS_INFO("object names loaded");	
+}
+
+void CameraConeDetection::showConsoleResult(const std::vector<bbox_t>& result_vec) const
+{
+  for (const auto &i : result_vec)
+  {
+    if (obj_names_.size() > i.obj_id) 
+      std::cout << obj_names_[i.obj_id] << " - ";
+    
+    const std::string obj_name = obj_names_[i.obj_id];
+    std::cout << "obj_name = " << obj_name << ",  x = " << i.x_3d << ", y = " << i.y_3d
+      << std::setprecision(3) << ", prob = " << i.prob << std::endl;
+  }
+}
+
+float CameraConeDetection::getMedian(std::vector<float> &v) const
+{
+  const size_t n = v.size() / 2;
+  std::nth_element(v.begin(), v.begin() + n, v.end());
+  return v[n];
+}
+
+void CameraConeDetection::get3dCoordinates(std::vector <bbox_t>* bbox_vect, const cv::Mat& xyzrgba) const
+{
+  int i, j;
+  static const unsigned int R_max_global = 10;
+
+  std::vector <bbox_t> bbox3d_vect;
+
+  for (auto &cur_box : *bbox_vect)
+  {
+
+    const unsigned int obj_size = std::min(cur_box.w, cur_box.h);
+    const unsigned int R_max = std::min(R_max_global, obj_size / 2);
+    const int center_i = cur_box.x + cur_box.w * 0.5f;
+    const int center_j = cur_box.y + cur_box.h * 0.5f;
+
+    std::vector<float> x_vect, y_vect, z_vect;
+    for (int R = 0; R < R_max; R++)
+    {
+      for (int y = -R; y <= R; y++)
+      {
+        for (int x = -R; x <= R; x++)
+        {
+          i = center_i + x;
+          j = center_j + y;
+          sl::float4 out(NAN, NAN, NAN, NAN);
+          if (i >= 0 && i < xyzrgba.cols && j >= 0 && j < xyzrgba.rows)
+          {
+            cv::Vec4f elem = xyzrgba.at<cv::Vec4f>(j, i);  // x,y,z,w
+            out.x = elem[0];
+            out.y = elem[1];
+            out.z = elem[2];
+            out.w = elem[3];
+          }
+          if (std::isfinite(out.z)) // valid measure
+          {
+            x_vect.push_back(out.x);
+            y_vect.push_back(out.y);
+            z_vect.push_back(out.z);
+          }
+        }
+      }
+    }
+
+    if (x_vect.size() * y_vect.size() * z_vect.size() > 0)
+    {
+      cur_box.x_3d = getMedian(x_vect);
+      cur_box.y_3d = getMedian(y_vect);
+      cur_box.z_3d = getMedian(z_vect);
+    } 
+    else 
+    {
+      cur_box.x_3d = NAN;
+      cur_box.y_3d = NAN;
+      cur_box.z_3d = NAN;
+    }
+
+    bbox3d_vect.emplace_back(cur_box);
+  }
+
+  bbox_vect = &bbox3d_vect;
+}
+
+
+cv::Mat CameraConeDetection::slMat2cvMat(const sl::Mat &input) const
+{
+  // Mapping between MAT_TYPE and CV_TYPE
+  int cv_type = -1;
+  switch (input.getDataType())
+  {
+    case sl::MAT_TYPE::F32_C1 : cv_type = CV_32FC1; break;
+    case sl::MAT_TYPE::F32_C2 : cv_type = CV_32FC2; break;
+    case sl::MAT_TYPE::F32_C3 : cv_type = CV_32FC3; break;
+    case sl::MAT_TYPE::F32_C4 : cv_type = CV_32FC4; break;
+    case sl::MAT_TYPE::U8_C1  : cv_type = CV_8UC1; break;
+    case sl::MAT_TYPE::U8_C2  : cv_type = CV_8UC2; break;
+    case sl::MAT_TYPE::U8_C3  : cv_type = CV_8UC3; break;
+    case sl::MAT_TYPE::U8_C4  : cv_type = CV_8UC4; break;
+    default                   : break;
+  }
+  return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(sl::MEM::CPU));
+}
+
+cv::Mat CameraConeDetection::zedCaptureRGB(void)
+{
+  sl::Mat left;
+  zed_.retrieveImage(left);
+  cv::Mat left_rgb;
+  cv::cvtColor(slMat2cvMat(left), left_rgb, cv::COLOR_RGBA2RGB);
+  return left_rgb;
+}
+
+cv::Mat CameraConeDetection::zedCapture3D(void)
+{
+  sl::Mat cur_cloud;
+  zed_.retrieveMeasure(cur_cloud, sl::MEASURE::XYZ);
+  return slMat2cvMat(cur_cloud).clone();
 }
