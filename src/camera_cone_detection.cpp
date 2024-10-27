@@ -353,143 +353,110 @@ void CameraConeDetection::update()
     vis_debug_pub_.publish(state);
   #endif
 
-  ros::Time capture_time;
-  cv::Mat cur_frame;
-  cv::Mat zed_cloud;
-
-  std_msgs::Empty empty;
-
-  sl::SensorsData data;
-
-  // Set parameters for Positional Tracking
-  sl::Pose camera_pose;
-  sl::POSITIONAL_TRACKING_STATE tracking_state;
-  
-  //TODO function body
   if (zed_.grab() == sl::ERROR_CODE::SUCCESS)
   {
-
-    capture_time = ros::Time::now();
-    cur_frame = zedCaptureRGB(zed_);
-    zed_cloud = zedCapture3D(zed_);
+    const auto capture_time = ros::Time::now();
+    auto cur_frame = zedCaptureRGB(zed_);
+    const auto zed_cloud = zedCapture3D(zed_);
     if (cur_frame.empty())
     {
-      std::cout << " exit_flag: detection_data.cap_frame.size = " << cur_frame.size() << std::endl;
+      ROS_WARN_STREAM("exit_flag: detection_data.cap_frame.size = " << cur_frame.size());
       cur_frame = cv::Mat(cur_frame.size(), CV_8UC3);
     }
 
     std::vector <bbox_t> result_vec = detector_.detect(cur_frame, thresh);
-    
-    // auto s = std::chrono::steady_clock::now();
     result_vec = get_3d_coordinates(result_vec, zed_cloud);
       
   #ifdef SGT_DEBUG_STATE
     num_of_detected_cones_ = result_vec.size();
   #endif
 
-    sgtdv_msgs::ConeStampedArr coneArr;
-    sgtdv_msgs::ConeStamped cone;
-    sgtdv_msgs::Point2DStamped point2D;
-    
-    sgtdv_msgs::Point2DStampedArr point2DArr;
-    
-    int i_n = 0;
-      
-    for (auto &i : result_vec)
-    {
-      ROS_DEBUG_STREAM(std::fixed << std::setprecision(4) << "p: " << i.prob);
-      point2D.header.frame_id = "camera_left";
-      point2D.header.seq = i_n++;
-      point2D.header.stamp = capture_time;
-      point2D.x = i.x_3d;
-      point2D.y = i.y_3d;
-      cone.coords = point2D;
-      
-      std::string obj_name = obj_names_[i.obj_id];
-      if (i.obj_id == 0) //yellow_cone
-        cone.color = 'y';
-      if (i.obj_id == 1) //blue_cone
-        cone.color = 'b';
-      if (i.obj_id == 2) //orange_cone_small
-        cone.color = 's';
-      if (i.obj_id == 3) //orange_cone_big
-        cone.color = 'g';
-      coneArr.cones.push_back(cone);
+    { /* Fill up camera_cones topic message */
+      sgtdv_msgs::ConeStampedArr coneArr;
+      sgtdv_msgs::ConeStamped cone;
+      cone.coords.header.frame_id = "camera_left";
+      cone.coords.header.stamp = capture_time;
+  
+      int i_n = 0;
+      for (const auto &i : result_vec)
+      {
+        cone.coords.header.seq = i_n++;
+        cone.coords.x = i.x_3d;
+        cone.coords.y = i.y_3d;
+        
+        switch(i.obj_id)
+        {
+          case CONE_CLASSES::YELLOW       : cone.color = 'y'; break;
+          case CONE_CLASSES::BLUE         : cone.color = 'b'; break;
+          case CONE_CLASSES::ORANGE_SMALL : cone.color = 's'; break;
+          case CONE_CLASSES::ORANGE_BIG   : cone.color = 'g'; break;
+          default                         : break;
+        }
+        coneArr.cones.push_back(cone);
+      }
+      cone_pub_.publish(coneArr);
     }
-    cone_pub_.publish(coneArr);
-      
-    if(params_.publish_carstate)
-    {
-      geometry_msgs::PoseWithCovarianceStamped carState;
-      tracking_state = zed_.getPosition(camera_pose, sl::REFERENCE_FRAME::WORLD); //get actual position
-      // std::cout << "Camera position: X=" << camera_pose.getTranslation().x << " Y=" << camera_pose.getTranslation().y << " Z=" << camera_pose.getTranslation().z << std::endl;
-      // std::cout << "Camera Euler rotation: X=" << camera_pose.getEulerAngles().x << " Y=" << camera_pose.getEulerAngles().y << " Z=" << camera_pose.getEulerAngles().z << std::endl;
-      // std::cout << "Camera Quaternion: X=" << camera_pose.getOrientation().x << " Y=" << camera_pose.getOrientation().y << " Z=" << camera_pose.getOrientation().z << " W=" << camera_pose.getOrientation().w << std::endl;
-      // std::cout << "camera_pose.pose_covariance[36]: " << std::endl;
-      // for (size_t i = 0; i < (sizeof(camera_pose.pose_covariance)/sizeof(*camera_pose.pose_covariance)); i++) {
-      //    if ((i % 3) == 0) {
-      //        std::cout <<""<< std::endl;
-      //    }
-      //    std::cout << camera_pose.pose_covariance[i] << " ";
-      // }
-      // std::cout <<""<< std::endl;
 
-      // Fill up header message
+    if(params_.publish_carstate)
+    { /* Fill up camera_pose topic message */
+      const auto tracking_state = zed_.getPosition(camera_pose_, sl::REFERENCE_FRAME::WORLD); //get actual position
+
+      geometry_msgs::PoseWithCovarianceStamped carState;
       carState.header.stamp = capture_time;
       carState.header.frame_id = "odom";
-      // Fill up pose message
-      carState.pose.pose.position.x = camera_pose.getTranslation().x;
-      carState.pose.pose.position.y = camera_pose.getTranslation().y;
-      carState.pose.pose.position.z = camera_pose.getTranslation().z;
 
-      carState.pose.pose.orientation.x = camera_pose.getOrientation().x;
-      carState.pose.pose.orientation.y = camera_pose.getOrientation().y;
-      carState.pose.pose.orientation.z = camera_pose.getOrientation().z;
-      carState.pose.pose.orientation.w = camera_pose.getOrientation().w;
+      carState.pose.pose.position.x = camera_pose_.getTranslation().x;
+      carState.pose.pose.position.y = camera_pose_.getTranslation().y;
+      carState.pose.pose.position.z = camera_pose_.getTranslation().z;
 
-      for (size_t i = 0; i < (sizeof(camera_pose.pose_covariance)/sizeof(*camera_pose.pose_covariance)); i++)
+      carState.pose.pose.orientation.x = camera_pose_.getOrientation().x;
+      carState.pose.pose.orientation.y = camera_pose_.getOrientation().y;
+      carState.pose.pose.orientation.z = camera_pose_.getOrientation().z;
+      carState.pose.pose.orientation.w = camera_pose_.getOrientation().w;
+
+      for (size_t i = 0; i < (sizeof(camera_pose_.pose_covariance)/sizeof(*camera_pose_.pose_covariance)); i++)
       {
-        carState.pose.covariance[i] = camera_pose.pose_covariance[i];
+        carState.pose.covariance[i] = camera_pose_.pose_covariance[i];
       }
 
       carstate_pub_.publish(carState);
     }    
 
-    /*if (cam_model == sl::MODEL::ZED2) 
-    {
-      if (zed.getSensorsData(data, sl::TIME_REFERENCE::CURRENT) == sl::ERROR_CODE::SUCCESS)
-      {
-        // Filtered orientation quaternion
-        std::cout << "IMU Orientation x: " << data.imu.pose.getOrientation().ox << "y: "
-                  << data.imu.pose.getOrientation().oy <<
-                  "z: " << data.imu.pose.getOrientation().oz << "w: " << data.imu.pose.getOrientation().ow
-                  << std::endl;
+    // if (cam_model_ == sl::MODEL::ZED2) 
+    // {
+    //   if (zed_.getSensorsData(sensors_data_, sl::TIME_REFERENCE::CURRENT) == sl::ERROR_CODE::SUCCESS)
+    //   {
+    //     // Filtered orientation quaternion
+    //     std::cout << "IMU Orientation x: " << sensors_data_.imu.pose.getOrientation().ox << "y: "
+    //               << sensors_data_.imu.pose.getOrientation().oy <<
+    //               "z: " << sensors_data_.imu.pose.getOrientation().oz << "w: " << sensors_data_.imu.pose.getOrientation().ow
+    //               << std::endl;
 
-        // Filtered acceleration
-        std::cout << "IMU Acceleration [m/sec^2] x: " << data.imu.linear_acceleration.x << "y: "
-                  << data.imu.linear_acceleration.y <<
-                  "z: " << data.imu.linear_acceleration.z << std::endl;
+    //     // Filtered acceleration
+    //     std::cout << "IMU Acceleration [m/sec^2] x: " << sensors_data_.imu.linear_acceleration.x << "y: "
+    //               << sensors_data_.imu.linear_acceleration.y <<
+    //               "z: " << sensors_data_.imu.linear_acceleration.z << std::endl;
 
-        // Filtered angular velocities
-        std::cout << "IMU angular velocities [deg/sec] x: " << data.imu.angular_velocity.x << "y: "
-                  << data.imu.angular_velocity.y <<
-                  "z: " << data.imu.angular_velocity.z << std::endl;
-      }
-    }*/
+    //     // Filtered angular velocities
+    //     std::cout << "IMU angular velocities [deg/sec] x: " << sensors_data_.imu.angular_velocity.x << "y: "
+    //               << sensors_data_.imu.angular_velocity.y <<
+    //               "z: " << sensors_data_.imu.angular_velocity.z << std::endl;
+    //   }
+    // }
 
-
-    if(params_.camera_show) drawBoxes(cur_frame, result_vec, obj_names_);
-    
-    if(params_.record_video)
+    if(params_.camera_show || params_.record_video)
     {
       drawBoxes(cur_frame, result_vec, obj_names_);
-      output_video_ << cur_frame;
+
+      if(params_.record_video)
+      {
+        output_video_ << cur_frame;
+      }
     }
-        
+
     if(params_.console_show) showConsoleResult(result_vec, obj_names_);
   }
     
-
   #ifdef SGT_DEBUG_STATE
     state.working_state = 0;
     state.stamp = ros::Time::now();

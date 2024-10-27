@@ -155,6 +155,8 @@ private:
   
   sl::Camera zed_; // ZED-camera object
   sl::MODEL cam_model_;
+  sl::Pose camera_pose_;
+  sl::SensorsData sensors_data_;
 
   cv::VideoWriter output_video_;
   float const thresh = 0.2;
