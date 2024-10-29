@@ -4,7 +4,7 @@ ___
 
 &copy; **SGT Driverless**
 
-**Authors:** Juraj Krasňanský, Matúš Tomšík
+**Authors:** Juraj Krasňanský, Matúš Tomšík, Viktor Budylin (2024), Alexander Bobrov (2024)
 
 **Objective:** Cone detection, position estimation and classification from ZED camera picture.
 
@@ -33,7 +33,7 @@ ___
 
 ## Compilation
 
-Configuration files for NN, generated *.weights and *.svo files are stored in folder [**Darknet_cone_detection**](https://drive.google.com/drive/folders/144MJlPqqrMii9dVJtaWv_vCwrJNkGFed?usp=sharing) on G-Drive. Copy this folder into `src/camera_cone_detection/`. If any file is changed, it needs to be updated on G-Drive.
+Configuration files for NN, generated *.weights and *.svo files are stored in folder [**Darknet_cone_detection**](https://drive.google.com/drive/folders/144MJlPqqrMii9dVJtaWv_vCwrJNkGFed?usp=sharing) on G-Drive. Copy this folder into `src/camera_cone_detection/`. If any file is changed, it needs to be updated on G-Drive. New weights also lie on [**G-Drive**](https://drive.google.com/drive/u/1/folders/1LW0ZmNBE1v93NTcOAzq3gNRCSCzKWU6H).
 
 The following packages have to be built at first:
   - `sgtdv_msgs`
@@ -76,3 +76,13 @@ In new terminal run:
  ## Visual odometry
  Node `visualOdometry` located in `visual_odometry` package subscribes `/camera_pose` topic from `cameraConeDetection` node and publishes transformation from `base_link` to `odom` frame on general `/tf` topic.
 
+## Benchmarking different YOLO configurations
+It is claimed by Stephane Charette that yolov4-tiny is both faster to train and more accurate, has faster inference time than yolov7-tiny. Though we were unable to train yolov4-tiny to be more precise than yolov7-tiny. It may be caused by the overall complexity of FSOCO dataset. To get better runtime performance (inference time) we chose to decrease network size. In case there are any questions, please consult Darknet [FAQ](https://www.ccoderun.ca/programming/darknet_faq/#fps). All of the tests were run on Jetson AGX Xavier. yolov4-tiny-obj turned out to be even slower than FSOCO yolov4-tiny. yolov4-tiny-3l-obj had visible problems with detection seen on visualization. Never use those network configurations.
+
+|Model and dataset|Resolution|FPS w/o viz|FPS with viz|mAP@0.5|mAP@0.75|
+|-----------------|----------|-----------|------------|-------|--------|
+|FSOCO yolov7-tiny| 640x640  |  21.3     |    18      |  76%  |   54%  |
+|FSOCO yolov7-tiny| 416x416  |  23.8     |  not tested|not tested|not tested|
+|FSOCO yolov4-tiny| 608x608  |  23.26|  20  | 68%  | 49%  |
+|FSOCO yolov4-tiny| 416x416  |  29.5| 25  | not tested|not tested|
+|own dataset yolov3-tiny| 416x416  | 30 | 19| 12%!!! | not tested|
