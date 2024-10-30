@@ -1,39 +1,24 @@
 /*****************************************************/
 //Organization: Stuba Green Team
-//Authors: Matúš Tomšík, Juraj Krasňanský
+//Authors: Matúš Tomšík, Juraj Krasňanský, Patrik Knaperek
 /*****************************************************/
 
+/* ROS */
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <std_msgs/Empty.h>
-#include <std_msgs/String.h>
-#include <sgtdv_msgs/ConeStampedArr.h>
-#include <sgtdv_msgs/ConeStamped.h>
-#include <sgtdv_msgs/Point2DStamped.h>
-#include <sgtdv_msgs/Point2DStampedArr.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
+
+/* SGT-DV */
+#include <sgtdv_msgs/ConeStampedArr.h>
 #include <sgtdv_msgs/DebugState.h>
-#include "../../SGT_Macros.h"
-#include "../../SGT_Utils.h"
-#include <chrono>
+#include "SGT_Macros.h"
+#include "SGT_Utils.h"
 
-
-#include <iostream>
-#include <iomanip>
-#include <string>
-#include <vector>
-#include <queue>
-#include <fstream>
-#include <thread>
-#include <future>
-#include <atomic>
-#include <mutex>         // std::mutex, std::unique_lock
-#include <cmath>
-#include <stdio.h>
-
-
+/* Darknet */
 #include "yolo_v2_class.hpp"    // imported functions from DLL
 
+/* ZED, OpenCV */
 #define ZED_STEREO
 #define OPENCV
 
@@ -185,7 +170,7 @@ private:
   void showConsoleResult(const std::vector <bbox_t>& result_vec) const;
 
   void drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>& result_vec,
-                const int current_det_fps, const int current_cap_fps) const;
+                const int current_det_fps = -1, const int current_cap_fps = -1) const;
   
   void getObjectsNamesFromFile(void);
 };

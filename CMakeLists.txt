@@ -145,6 +145,7 @@ include_directories(
   ${ZED_INCLUDE_DIRS}
   ${catkin_INCLUDE_DIRS}
   ${Eigen3_INCLUDE_DIRS}
+  ${CMAKE_SOURCE_DIR}/../
 )
 
 ## Declare a C++ library

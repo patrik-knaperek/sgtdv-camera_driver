@@ -3,11 +3,7 @@
 //Authors: Matúš Tomšík, Juraj Krasňanský
 /*****************************************************/
 
-#include <ros/package.h>
-
-#include "../../SGT_Utils.h"
-
-#include "../include/camera_cone_detection.h"
+#include "camera_cone_detection.h"
 
 CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle, const Params& params)
   : detector_(params.cfg_file, params.weights_file)
@@ -256,7 +252,7 @@ void CameraConeDetection::update()
 }
 
 void CameraConeDetection::drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>& result_vec,
-                                    const int current_det_fps = -1, const int current_cap_fps = -1) const
+                                    const int current_det_fps, const int current_cap_fps) const
 {
   for (const auto &i : result_vec)
   {

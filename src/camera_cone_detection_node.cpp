@@ -3,10 +3,7 @@
 //Authors: Juraj Krasňanský
 /*****************************************************/
 
-#include <ros/ros.h>
-#include "../include/camera_cone_detection.h"
-#include <sgtdv_msgs/DebugState.h>
-#include "../../SGT_Macros.h"
+#include "camera_cone_detection.h"
 
 int main(int argc, char **argv)
 {
