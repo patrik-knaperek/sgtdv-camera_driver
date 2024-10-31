@@ -4,7 +4,7 @@ ___
 
 &copy; **SGT Driverless**
 
-**Authors:** Juraj Krasňanský, Matúš Tomšík, Viktor Budylin (2024), Alexander Bobrov (2024)
+**Authors:** Juraj Krasňanský, Matúš Tomšík, Viktor Budylin, Alexander Bobrov, Patrik Knaperek
 
 **Objective:** Cone detection, position estimation and classification from ZED camera picture.
 
@@ -58,9 +58,9 @@ Set the input stream in `CameraConeDetection.h` with variable `filename` value:
  * **"<path_to_.svo_file>"** : recorded SVO video
 
 ## Launch
-```
-  $ source ros_implementation/devel/setup.bash
-  $ roslaunch camera_cone_detection camera_cone_detection.launch
+```sh
+$ source ros_implementation/devel/setup.bash
+$ roslaunch camera_cone_detection camera_cone_detection.launch
 ```
 
 ### Launch configuration
@@ -68,9 +68,9 @@ In `param/camera_cone_detection.yaml` path to NN configuration files and output 
 
 ### RViz visualization
 In new terminal run:
-```
-    $ source ros_implementation/devel/setup.bash
-    $ roslaunch sensors_visualizator sensors_visualizator_camera.launch
+```sh
+$ source ros_implementation/devel/setup.bash
+$ roslaunch data_visualization data_visualization_camera.launch
 ```
 
  ## Visual odometry

@@ -1,6 +1,6 @@
 /*****************************************************/
 //Organization: Stuba Green Team
-//Authors: Matúš Tomšík, Juraj Krasňanský
+//Authors: Matúš Tomšík, Juraj Krasňanský, Patrik Knaperek
 /*****************************************************/
 
 #include "camera_cone_detection.h"
@@ -122,9 +122,9 @@ void CameraConeDetection::initialize(void)
   if(params_.record_video)
   {
   #ifdef CV_VERSION_EPOCH // OpenCV 2.x
-    output_video_.open(out_videofile_, CV_FOURCC('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), true);
+    output_video_.open(out_videofile_, CV_FOURCC('D', 'I', 'V', 'X'), FPS, cv::Size(1280, 720), true);
   #else
-    output_video_.open(params_.out_video_file, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), 30, cv::Size(1280, 720), 
+    output_video_.open(params_.out_video_file, cv::VideoWriter::fourcc('D', 'I', 'V', 'X'), FPS, cv::Size(1280, 720), 
                       true);
   #endif
   }

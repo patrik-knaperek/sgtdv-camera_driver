@@ -1,0 +1,15 @@
+# ROS
+.catkin_tools/
+logs
+devel
+build
+darknet
+documentation
+velodyne
+libdarknet.so
+
+*.avi
+*.mp4
+*.svo
+*.bag
+data/
