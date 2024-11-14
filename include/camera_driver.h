@@ -62,7 +62,7 @@
 
 constexpr int FPS = 30;
 
-class CameraConeDetection
+class CameraDriver
 {
 public:
   struct Params
@@ -82,7 +82,7 @@ public:
 
   static Params loadParams(const ros::NodeHandle& nh)
   {
-    const auto path_to_package = ros::package::getPath("camera_cone_detection");
+    const auto path_to_package = ros::package::getPath("camera_driver");
     std::string filename_temp;
     Params params;
     
@@ -114,9 +114,9 @@ public:
   };
 
 public:
-  explicit CameraConeDetection(ros::NodeHandle& nh, const Params& params);
+  explicit CameraDriver(ros::NodeHandle& nh, const Params& params);
 
-  ~CameraConeDetection();
+  ~CameraDriver();
 
   void update();
 

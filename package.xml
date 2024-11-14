@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <package format="2">
-  <name>camera_cone_detection</name>
+  <name>camera_driver</name>
   <version>0.0.0</version>
-  <description>The camera_cone_detection package</description>
+  <description>The camera_driver package</description>
 
   <maintainer email="ligazetom@todo.todo">ligazetom</maintainer>
   <maintainer email="matusino221@gmail.com">Matus Tomsik</maintainer>

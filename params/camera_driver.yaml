@@ -1,0 +1,14 @@
+obj_names_filename: "/Darknet_cone_detection/kuzel.names"
+cfg_filename: "/Darknet_cone_detection/FSOCO24_yolov4-tiny.cfg"
+weights_filename: "/Darknet_cone_detection/FSOCO24_yolov4-tiny_best.weights"
+output_video_filename: "/recordings/camera_test.mp4"
+output_svo_filename: "/measurement_model/9m_right.svo"
+
+input_stream: "zed_camera"                        # ZED camera
+# input_stream: "/recordings/camera_test.svo"     # SVO video
+
+publish_carstate: true
+camera_show: false
+console_show: false
+record_video: false
+record_video_svo: false

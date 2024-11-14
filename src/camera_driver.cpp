@@ -3,22 +3,22 @@
 //Authors: Matúš Tomšík, Juraj Krasňanský, Patrik Knaperek
 /*****************************************************/
 
-#include "camera_cone_detection.h"
+#include "camera_driver.h"
 
-CameraConeDetection::CameraConeDetection(ros::NodeHandle& handle, const Params& params)
+CameraDriver::CameraDriver(ros::NodeHandle& handle, const Params& params)
   : detector_(params.cfg_file, params.weights_file)
   , params_(params)
   , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1))
   , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1))
-  , reset_odom_sub_(handle.subscribe("reset_odometry", 1, &CameraConeDetection::resetOdomCallback, this))
+  , reset_odom_sub_(handle.subscribe("reset_odometry", 1, &CameraDriver::resetOdomCallback, this))
 #ifdef SGT_DEBUG_STATE
-  , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1))
+  , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera_driver_debug_state", 1))
 #endif
 {
   initialize();
 }
 
-CameraConeDetection::~CameraConeDetection()
+CameraDriver::~CameraDriver()
 {
   if(params_.record_video_svo)
     zed_.disableRecording();
@@ -32,12 +32,12 @@ CameraConeDetection::~CameraConeDetection()
   if(params_.record_video) output_video_.release();
 }
 
-void CameraConeDetection::resetOdomCallback(const std_msgs::Empty::ConstPtr& msg)
+void CameraDriver::resetOdomCallback(const std_msgs::Empty::ConstPtr& msg)
 {
   zed_.resetPositionalTracking(sl::Transform(sl::Matrix4f::identity()));
 }
 
-void CameraConeDetection::initialize(void)
+void CameraDriver::initialize(void)
 {  
   getObjectsNamesFromFile();
   if (obj_names_.size() == 0)
@@ -130,7 +130,7 @@ void CameraConeDetection::initialize(void)
   }
 }
 
-void CameraConeDetection::update()
+void CameraDriver::update()
 {
   #ifdef SGT_DEBUG_STATE
     sgtdv_msgs::DebugState state;
@@ -251,7 +251,7 @@ void CameraConeDetection::update()
   #endif
 }
 
-void CameraConeDetection::drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>& result_vec,
+void CameraDriver::drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>& result_vec,
                                     const int current_det_fps, const int current_cap_fps) const
 {
   for (const auto &i : result_vec)
@@ -314,7 +314,7 @@ void CameraConeDetection::drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>
   cv::waitKey(3);
 }
 
-void CameraConeDetection::getObjectsNamesFromFile(void)
+void CameraDriver::getObjectsNamesFromFile(void)
 {
 	std::ifstream file(params_.names_file);
 	if (!file.is_open())
@@ -330,7 +330,7 @@ void CameraConeDetection::getObjectsNamesFromFile(void)
   ROS_INFO("object names loaded");	
 }
 
-void CameraConeDetection::showConsoleResult(const std::vector<bbox_t>& result_vec) const
+void CameraDriver::showConsoleResult(const std::vector<bbox_t>& result_vec) const
 {
   for (const auto &i : result_vec)
   {
@@ -343,14 +343,14 @@ void CameraConeDetection::showConsoleResult(const std::vector<bbox_t>& result_ve
   }
 }
 
-float CameraConeDetection::getMedian(std::vector<float> &v) const
+float CameraDriver::getMedian(std::vector<float> &v) const
 {
   const size_t n = v.size() / 2;
   std::nth_element(v.begin(), v.begin() + n, v.end());
   return v[n];
 }
 
-void CameraConeDetection::get3dCoordinates(std::vector <bbox_t>* bbox_vect, const cv::Mat& xyzrgba) const
+void CameraDriver::get3dCoordinates(std::vector <bbox_t>* bbox_vect, const cv::Mat& xyzrgba) const
 {
   int i, j;
   static const unsigned int R_max_global = 10;
@@ -413,7 +413,7 @@ void CameraConeDetection::get3dCoordinates(std::vector <bbox_t>* bbox_vect, cons
 }
 
 
-cv::Mat CameraConeDetection::slMat2cvMat(const sl::Mat &input) const
+cv::Mat CameraDriver::slMat2cvMat(const sl::Mat &input) const
 {
   // Mapping between MAT_TYPE and CV_TYPE
   int cv_type = -1;
@@ -432,7 +432,7 @@ cv::Mat CameraConeDetection::slMat2cvMat(const sl::Mat &input) const
   return cv::Mat(input.getHeight(), input.getWidth(), cv_type, input.getPtr<sl::uchar1>(sl::MEM::CPU));
 }
 
-cv::Mat CameraConeDetection::zedCaptureRGB(void)
+cv::Mat CameraDriver::zedCaptureRGB(void)
 {
   sl::Mat left;
   zed_.retrieveImage(left);
@@ -441,7 +441,7 @@ cv::Mat CameraConeDetection::zedCaptureRGB(void)
   return left_rgb;
 }
 
-cv::Mat CameraConeDetection::zedCapture3D(void)
+cv::Mat CameraDriver::zedCapture3D(void)
 {
   sl::Mat cur_cloud;
   zed_.retrieveMeasure(cur_cloud, sl::MEASURE::XYZ);

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.0.2)
-project(camera_cone_detection)
+project(camera_driver)
 
 add_compile_options(-std=c++17)
 
@@ -52,10 +52,10 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/../
 )
 
-add_executable(${PROJECT_NAME} src/camera_cone_detection_node.cpp src/camera_cone_detection.cpp)
+add_executable(${PROJECT_NAME} src/${PROJECT_NAME}_node.cpp src/${PROJECT_NAME}.cpp)
 
 target_link_libraries(
-    camera_cone_detection
+    ${PROJECT_NAME}
     ${OpenCV_LIBS}
     ${ZED_LIBRARIES}
     ${PROJECT_SOURCE_DIR}/include/libdarknet.so

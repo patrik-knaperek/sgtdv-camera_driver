@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <rosparam command="load" file="$(find camera_cone_detection)/param/camera_cone_detection.yaml"/>
+  <rosparam command="load" file="$(find camera_driver)/param/camera_driver.yaml"/>
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_left_to_camera_center" 
     args="0 0.06 0 0 0 0 camera_center camera_left" />
@@ -8,5 +8,5 @@
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_center_to_base_link" 
     args="0 0 0 0 0 0 base_link camera_center" />
 
-  <node pkg="camera_cone_detection" type="camera_cone_detection" name="camera_cone_detection" output="screen"/>
+  <node pkg="camera_driver" type="camera_driver" name="camera_driver" output="screen"/>
 </launch>
