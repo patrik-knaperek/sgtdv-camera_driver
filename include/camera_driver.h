@@ -14,6 +14,7 @@
 #include <sgtdv_msgs/DebugState.h>
 #include "SGT_Macros.h"
 #include "SGT_Utils.h"
+#include "camera_cone_detection.h"
 
 /* Darknet */
 #include "yolo_v2_class.hpp"    // imported functions from DLL
@@ -68,8 +69,6 @@ public:
   struct Params
   {
     std::string names_file;
-    std::string cfg_file;
-    std::string weights_file;
     std::string out_video_file;
     std::string out_svo_file;
     std::string in_svo_file;
@@ -80,41 +79,23 @@ public:
     bool record_video_svo;
   };
 
-  static Params loadParams(const ros::NodeHandle& nh)
+  static CameraConeDetection::Params loadNNParams(const ros::NodeHandle& nh)
   {
     const auto path_to_package = ros::package::getPath("camera_driver");
     std::string filename_temp;
-    Params params;
-    
-    Utils::loadParam(nh, "/obj_names_filename", &filename_temp);
-    params.names_file = path_to_package + filename_temp;
-    
+    CameraConeDetection::Params params;
+
     Utils::loadParam(nh, "/cfg_filename", &filename_temp);
     params.cfg_file = path_to_package + filename_temp;
     
     Utils::loadParam(nh, "/weights_filename", &filename_temp);
     params.weights_file = path_to_package + filename_temp;
-    
-    Utils::loadParam(nh, "/output_video_filename", &filename_temp);
-    params.out_video_file = path_to_package + filename_temp;
-    
-    Utils::loadParam(nh, "/output_svo_filename", &filename_temp);
-    params.out_svo_file = path_to_package + filename_temp;
-    
-    Utils::loadParam(nh, "/input_stream", &filename_temp);
-    params.in_svo_file = path_to_package + filename_temp;
 
-    Utils::loadParam(nh, "/publish_carstate", false, &params.publish_carstate);
-    Utils::loadParam(nh, "/camera_show", false, &params.camera_show);
-    Utils::loadParam(nh, "/console_show", false, &params.console_show);
-    Utils::loadParam(nh, "/record_video", false, &params.record_video);
-    Utils::loadParam(nh, "/record_video_svo", false, &params.record_video_svo);
-
-  return params;
-  };
+    return params;
+  }
 
 public:
-  explicit CameraDriver(ros::NodeHandle& nh, const Params& params);
+  CameraDriver(ros::NodeHandle& nh, const CameraConeDetection::Params& nn_params);
 
   ~CameraDriver();
 
@@ -122,22 +103,13 @@ public:
 
 private:
 
+  void loadParams(const ros::NodeHandle& nh);
+
   void initialize(void);
   
   void resetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
   
-  enum CONE_CLASSES
-  {
-    YELLOW,
-    BLUE,
-    ORANGE_SMALL,
-    ORANGE_BIG
-  };
-
-  static constexpr float DETECT_TH = 0.2;
-  
-  Detector detector_; // Darknet NN object
-  std::vector<std::string> obj_names_;
+  CameraConeDetection camera_cone_detection_;
   
   sl::Camera zed_; // ZED-camera object
   sl::MODEL cam_model_;
@@ -157,20 +129,9 @@ private:
   size_t num_of_detected_cones_ = 0;
 #endif
 
-  float getMedian(std::vector<float> &v) const;
-
-  void get3dCoordinates(std::vector <bbox_t>* bbox_vect, const cv::Mat& xyzrgba) const;
-
   cv::Mat slMat2cvMat(const sl::Mat &input) const;
 
   cv::Mat zedCaptureRGB(void);
 
   cv::Mat zedCapture3D(void);
-
-  void showConsoleResult(const std::vector <bbox_t>& result_vec) const;
-
-  void drawBoxes(cv::Mat* mat_img, const std::vector <bbox_t>& result_vec,
-                const int current_det_fps = -1, const int current_cap_fps = -1) const;
-  
-  void getObjectsNamesFromFile(void);
 };

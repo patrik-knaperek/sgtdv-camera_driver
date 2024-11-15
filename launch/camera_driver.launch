@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <launch>
-  <rosparam command="load" file="$(find camera_driver)/param/camera_driver.yaml"/>
+  <rosparam command="load" file="$(find camera_driver)/params/camera_driver.yaml"/>
 
   <node pkg="tf2_ros" type="static_transform_publisher" name="camera_left_to_camera_center" 
     args="0 0.06 0 0 0 0 camera_center camera_left" />

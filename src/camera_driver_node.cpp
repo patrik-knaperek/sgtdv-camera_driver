@@ -10,7 +10,7 @@ int main(int argc, char **argv)
   ros::init(argc, argv, "camera_driver");
   ros::NodeHandle handle;
 
-  CameraDriver camera_driver(handle, CameraDriver::loadParams(handle));
+  CameraDriver camera_driver(handle, CameraDriver::loadNNParams(handle));
 
   ros::Rate loop_rate(FPS);
   while (ros::ok())

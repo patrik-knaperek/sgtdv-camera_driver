@@ -52,7 +52,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}/../
 )
 
-add_executable(${PROJECT_NAME} src/${PROJECT_NAME}_node.cpp src/${PROJECT_NAME}.cpp)
+add_executable(${PROJECT_NAME} src/${PROJECT_NAME}_node.cpp src/${PROJECT_NAME}.cpp src/camera_cone_detection.cpp)
 
 target_link_libraries(
     ${PROJECT_NAME}
