@@ -9,7 +9,7 @@ CameraDriver::CameraDriver(ros::NodeHandle& handle, const CameraConeDetection::P
   : camera_cone_detection_(nn_params)
   , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera/cones", 1))
   , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera/pose", 1))
-  , reset_odom_sub_(handle.subscribe("camera/reset_odometry", 1, &CameraDriver::resetOdomCallback, this))
+  , reset_odom_server_(handle.advertiseService("camera/reset_odometry", &CameraDriver::resetOdomCallback, this))
 #ifdef SGT_DEBUG_STATE
   , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera/debug_state", 1))
 #endif
@@ -33,28 +33,28 @@ CameraDriver::~CameraDriver()
 }
 
 void CameraDriver::loadParams(const ros::NodeHandle& nh)
-  {
-    const auto path_to_package = ros::package::getPath("camera_driver");
-    std::string filename_temp;
-    
-    Utils::loadParam(nh, "/obj_names_filename", &filename_temp);
-    params_.names_file = path_to_package + filename_temp;
-    
-    Utils::loadParam(nh, "/output_video_filename", &filename_temp);
-    params_.out_video_file = path_to_package + filename_temp;
-    
-    Utils::loadParam(nh, "/output_svo_filename", &filename_temp);
-    params_.out_svo_file = path_to_package + filename_temp;
-    
-    Utils::loadParam(nh, "/input_stream", &filename_temp);
-    params_.in_svo_file = path_to_package + filename_temp;
+{
+  const auto path_to_package = ros::package::getPath("camera_driver");
+  std::string filename_temp;
+  
+  Utils::loadParam(nh, "/obj_names_filename", &filename_temp);
+  params_.names_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/output_video_filename", &filename_temp);
+  params_.out_video_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/output_svo_filename", &filename_temp);
+  params_.out_svo_file = path_to_package + filename_temp;
+  
+  Utils::loadParam(nh, "/input_stream", &filename_temp);
+  params_.in_svo_file = path_to_package + filename_temp;
 
-    Utils::loadParam(nh, "/publish_carstate", false, &params_.publish_carstate);
-    Utils::loadParam(nh, "/camera_show", false, &params_.camera_show);
-    Utils::loadParam(nh, "/console_show", false, &params_.console_show);
-    Utils::loadParam(nh, "/record_video", false, &params_.record_video);
-    Utils::loadParam(nh, "/record_video_svo", false, &params_.record_video_svo);
-  };
+  Utils::loadParam(nh, "/publish_carstate", false, &params_.publish_carstate);
+  Utils::loadParam(nh, "/camera_show", false, &params_.camera_show);
+  Utils::loadParam(nh, "/console_show", false, &params_.console_show);
+  Utils::loadParam(nh, "/record_video", false, &params_.record_video);
+  Utils::loadParam(nh, "/record_video_svo", false, &params_.record_video_svo);
+};
 
 void CameraDriver::initialize(void)
 {  
@@ -273,9 +273,11 @@ void CameraDriver::update()
   }
 }
 
-void CameraDriver::resetOdomCallback(const std_msgs::Empty::ConstPtr& msg)
+bool CameraDriver::resetOdomCallback(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res)
 {
   zed_.resetPositionalTracking(sl::Transform(sl::Matrix4f::identity()));
+
+  return true;
 }
 
 cv::Mat CameraDriver::slMat2cvMat(const sl::Mat &input) const

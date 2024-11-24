@@ -6,7 +6,7 @@
 /* ROS */
 #include <ros/ros.h>
 #include <ros/package.h>
-#include <std_msgs/Empty.h>
+#include <std_srvs/Empty.h>
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 /* SGT-DV */
@@ -107,7 +107,7 @@ private:
 
   void initialize(void);
   
-  void resetOdomCallback(const std_msgs::Empty::ConstPtr& msg);
+  bool resetOdomCallback(std_srvs::Empty::Request& req, std_srvs::Empty::Response& res);
   
   CameraConeDetection camera_cone_detection_;
   
@@ -122,7 +122,7 @@ private:
 
   ros::Publisher cone_pub_;
   ros::Publisher carstate_pub_;
-  ros::Subscriber reset_odom_sub_;
+  ros::ServiceServer reset_odom_server_;
 
 #ifdef SGT_DEBUG_STATE
   ros::Publisher vis_debug_pub_;
