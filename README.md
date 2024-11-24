@@ -43,10 +43,6 @@ In folder `ros_implementation/src/` run:
 $ catkin build camera_driver -DCMAKE_BUILD_TYPE=Release
 ```
 
-Set the input stream in `CameraConeDetection.h` with variable `filename` value:
- * **"zed_camera"** : live camera picture
- * **"<path_to_.svo_file>"** : recorded SVO video
-
 ## Launch
 ```sh
 $ source ros_implementation/devel/setup.bash
@@ -75,7 +71,7 @@ $ roslaunch data_visualization data_visualization_camera.launch
 ```
 
  ## Visual odometry
- Node `visual_odometry` subscribes `/camera_pose` topic from `camera_driver` node and publishes transformation from `base_link` to `odom` frame on general `/tf` topic.
+ Node `visual_odometry` subscribes `/camera/pose` topic from `camera_driver` node and publishes transformation from `base_link` to `odom` frame on general `/tf` topic.
 
 ## Benchmarking different YOLO configurations
 It is claimed by Stephane Charette that yolov4-tiny is both faster to train and more accurate, has faster inference time than yolov7-tiny. Though we were unable to train yolov4-tiny to be more precise than yolov7-tiny. It may be caused by the overall complexity of FSOCO dataset. To get better runtime performance (inference time) we chose to decrease network size. In case there are any questions, please consult Darknet [FAQ](https://www.ccoderun.ca/programming/darknet_faq/#fps). All of the tests were run on Jetson AGX Xavier. yolov4-tiny-obj turned out to be even slower than FSOCO yolov4-tiny. yolov4-tiny-3l-obj had visible problems with detection seen on visualization. Never use those network configurations.

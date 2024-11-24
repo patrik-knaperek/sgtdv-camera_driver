@@ -7,11 +7,11 @@
 
 CameraDriver::CameraDriver(ros::NodeHandle& handle, const CameraConeDetection::Params& nn_params)
   : camera_cone_detection_(nn_params)
-  , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera_cones", 1))
-  , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera_pose", 1))
-  , reset_odom_sub_(handle.subscribe("reset_odometry", 1, &CameraDriver::resetOdomCallback, this))
+  , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera/cones", 1))
+  , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera/pose", 1))
+  , reset_odom_sub_(handle.subscribe("camera/reset_odometry", 1, &CameraDriver::resetOdomCallback, this))
 #ifdef SGT_DEBUG_STATE
-  , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera_cone_detection_debug_state", 1))
+  , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera/debug_state", 1))
 #endif
 {
   loadParams(handle);
