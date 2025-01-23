@@ -3,6 +3,11 @@
 //Authors: Matúš Tomšík, Juraj Krasňanský, Patrik Knaperek
 /*****************************************************/
 
+/* ROS */
+#include <geometry_msgs/PoseWithCovarianceStamped.h>
+#include <sensor_msgs/Imu.h>
+
+/* Header */
 #include "camera_driver.h"
 
 CameraDriver::CameraDriver(ros::NodeHandle& handle, const CameraConeDetection::Params& nn_params)
@@ -11,6 +16,7 @@ CameraDriver::CameraDriver(ros::NodeHandle& handle, const CameraConeDetection::P
   /* ROS Interface initialization */
   , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera/cones", 1))
   , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera/pose", 1))
+  , imu_pub_(handle.advertise<sensor_msgs::Imu>("camera/imu", 1))
   , reset_odom_server_(handle.advertiseService("camera/reset_odometry", &CameraDriver::resetOdomCallback, this))
 #ifdef SGT_DEBUG_STATE
   , vis_debug_pub_(handle.advertise<sgtdv_msgs::DebugState>("camera/debug_state", 1))
@@ -111,6 +117,7 @@ void CameraDriver::initialize(void)
 
   // Check camera model
   cam_model_ = zed_.getCameraInformation().camera_model;
+  ROS_INFO_STREAM("camera model: " << cam_model_);
 
   /* set additional camera settings */
   zed_.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO, 1);
@@ -229,49 +236,107 @@ void CameraDriver::update()
     { /* Fill up camera_pose topic message */
       const auto tracking_state = zed_.getPosition(camera_pose_, sl::REFERENCE_FRAME::WORLD); //get actual position
 
-      geometry_msgs::PoseWithCovarianceStamped carState;
-      carState.header.stamp = capture_time;
-      carState.header.frame_id = "odom";
+      geometry_msgs::PoseWithCovarianceStamped car_state;
+      car_state.header.stamp = capture_time;
+      car_state.header.frame_id = "odom";
 
-      carState.pose.pose.position.x = camera_pose_.getTranslation().x;
-      carState.pose.pose.position.y = camera_pose_.getTranslation().y;
-      carState.pose.pose.position.z = camera_pose_.getTranslation().z;
+      car_state.pose.pose.position.x = camera_pose_.getTranslation().x;
+      car_state.pose.pose.position.y = camera_pose_.getTranslation().y;
+      car_state.pose.pose.position.z = camera_pose_.getTranslation().z;
 
-      carState.pose.pose.orientation.x = camera_pose_.getOrientation().x;
-      carState.pose.pose.orientation.y = camera_pose_.getOrientation().y;
-      carState.pose.pose.orientation.z = camera_pose_.getOrientation().z;
-      carState.pose.pose.orientation.w = camera_pose_.getOrientation().w;
+      car_state.pose.pose.orientation.x = camera_pose_.getOrientation().x;
+      car_state.pose.pose.orientation.y = camera_pose_.getOrientation().y;
+      car_state.pose.pose.orientation.z = camera_pose_.getOrientation().z;
+      car_state.pose.pose.orientation.w = camera_pose_.getOrientation().w;
 
       for (size_t i = 0; i < (sizeof(camera_pose_.pose_covariance)/sizeof(*camera_pose_.pose_covariance)); i++)
       {
-        carState.pose.covariance[i] = camera_pose_.pose_covariance[i];
+        car_state.pose.covariance[i] = camera_pose_.pose_covariance[i];
       }
 
-      carstate_pub_.publish(carState);
+      carstate_pub_.publish(car_state);
     }    
     /*************** ZED2 IMU INTERFACE ***************/
 
-    // if (cam_model_ == sl::MODEL::ZED2) 
-    // {
-    //   if (zed_.getSensorsData(sensors_data_, sl::TIME_REFERENCE::CURRENT) == sl::ERROR_CODE::SUCCESS)
-    //   {
-    //     // Filtered orientation quaternion
-    //     std::cout << "IMU Orientation x: " << sensors_data_.imu.pose.getOrientation().ox << "y: "
-    //               << sensors_data_.imu.pose.getOrientation().oy <<
-    //               "z: " << sensors_data_.imu.pose.getOrientation().oz << "w: " << sensors_data_.imu.pose.getOrientation().ow
-    //               << std::endl;
+    if (cam_model_ >= sl::MODEL::ZED2) 
+    {
+      sensor_msgs::Imu imu_data;
+      imu_data.header.stamp = capture_time;
+      imu_data.header.frame_id = "camera_center";
+      
+      if (zed_.getSensorsData(sensors_data_, sl::TIME_REFERENCE::CURRENT) == sl::ERROR_CODE::SUCCESS)
+      {
+        // Filtered orientation quaternion
+        ROS_DEBUG_STREAM("IMU Orientation x: " << sensors_data_.imu.pose.getOrientation().ox << 
+                      "y: " << sensors_data_.imu.pose.getOrientation().oy <<
+                      "z: " << sensors_data_.imu.pose.getOrientation().oz << 
+                      "w: " << sensors_data_.imu.pose.getOrientation().ow
+        );
 
-    //     // Filtered acceleration
-    //     std::cout << "IMU Acceleration [m/sec^2] x: " << sensors_data_.imu.linear_acceleration.x << "y: "
-    //               << sensors_data_.imu.linear_acceleration.y <<
-    //               "z: " << sensors_data_.imu.linear_acceleration.z << std::endl;
+        imu_data.orientation.x = sensors_data_.imu.pose.getOrientation().ox;
+        imu_data.orientation.y = sensors_data_.imu.pose.getOrientation().oy;
+        imu_data.orientation.z = sensors_data_.imu.pose.getOrientation().oz;
+        imu_data.orientation.w = sensors_data_.imu.pose.getOrientation().ow;
+        imu_data.orientation_covariance = 
+        {
+          sensors_data_.imu.pose_covariance.r00,
+          sensors_data_.imu.pose_covariance.r01,
+          sensors_data_.imu.pose_covariance.r02,
+          sensors_data_.imu.pose_covariance.r10,
+          sensors_data_.imu.pose_covariance.r11,
+          sensors_data_.imu.pose_covariance.r12,
+          sensors_data_.imu.pose_covariance.r20,
+          sensors_data_.imu.pose_covariance.r21,
+          sensors_data_.imu.pose_covariance.r22
+        };
 
-    //     // Filtered angular velocities
-    //     std::cout << "IMU angular velocities [deg/sec] x: " << sensors_data_.imu.angular_velocity.x << "y: "
-    //               << sensors_data_.imu.angular_velocity.y <<
-    //               "z: " << sensors_data_.imu.angular_velocity.z << std::endl;
-    //   }
-    // }
+        // Filtered acceleration
+        ROS_DEBUG_STREAM("IMU Acceleration [m/sec^2] x: " << sensors_data_.imu.linear_acceleration.x << 
+                        "y: " << sensors_data_.imu.linear_acceleration.y <<
+                        "z: " << sensors_data_.imu.linear_acceleration.z
+        );
+
+        imu_data.linear_acceleration.x = sensors_data_.imu.linear_acceleration.x;
+        imu_data.linear_acceleration.y = sensors_data_.imu.linear_acceleration.y;
+        imu_data.linear_acceleration.z = sensors_data_.imu.linear_acceleration.z;
+        imu_data.linear_acceleration_covariance = 
+        {
+          sensors_data_.imu.linear_acceleration_covariance.r00,
+          sensors_data_.imu.linear_acceleration_covariance.r01,
+          sensors_data_.imu.linear_acceleration_covariance.r02,
+          sensors_data_.imu.linear_acceleration_covariance.r10,
+          sensors_data_.imu.linear_acceleration_covariance.r11,
+          sensors_data_.imu.linear_acceleration_covariance.r12,
+          sensors_data_.imu.linear_acceleration_covariance.r20,
+          sensors_data_.imu.linear_acceleration_covariance.r21,
+          sensors_data_.imu.linear_acceleration_covariance.r22
+        };
+
+        // Filtered angular velocities
+        ROS_DEBUG_STREAM("IMU angular velocities [deg/sec] x: " << sensors_data_.imu.angular_velocity.x << 
+                        "y: " << sensors_data_.imu.angular_velocity.y <<
+                        "z: " << sensors_data_.imu.angular_velocity.z
+        );
+
+        imu_data.angular_velocity.x = sensors_data_.imu.angular_velocity.x * M_PI / 180.0;
+        imu_data.angular_velocity.y = sensors_data_.imu.angular_velocity.y * M_PI / 180.0;
+        imu_data.angular_velocity.z = sensors_data_.imu.angular_velocity.z * M_PI / 180.0;
+        imu_data.angular_velocity_covariance = 
+        {
+          sensors_data_.imu.angular_velocity_covariance.r00,
+          sensors_data_.imu.angular_velocity_covariance.r01,
+          sensors_data_.imu.angular_velocity_covariance.r02,
+          sensors_data_.imu.angular_velocity_covariance.r10,
+          sensors_data_.imu.angular_velocity_covariance.r11,
+          sensors_data_.imu.angular_velocity_covariance.r12,
+          sensors_data_.imu.angular_velocity_covariance.r20,
+          sensors_data_.imu.angular_velocity_covariance.r21,
+          sensors_data_.imu.angular_velocity_covariance.r22
+        };
+      }
+
+      imu_pub_.publish(imu_data);
+    }
   }
 }
 

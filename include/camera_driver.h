@@ -7,7 +7,6 @@
 #include <ros/ros.h>
 #include <ros/package.h>
 #include <std_srvs/Empty.h>
-#include <geometry_msgs/PoseWithCovarianceStamped.h>
 
 /* SGT-DV */
 #include <sgtdv_msgs/ConeStampedArr.h>
@@ -122,6 +121,7 @@ private:
 
   ros::Publisher cone_pub_;
   ros::Publisher carstate_pub_;
+  ros::Publisher imu_pub_;
   ros::ServiceServer reset_odom_server_;
 
 #ifdef SGT_DEBUG_STATE
