@@ -1,0 +1,6 @@
+<?xml version="1.0"?>
+<launch>
+  <include file="$(find camera_driver)/launch/camera_driver.launch"/>
+  
+  <node pkg="visual_odometry" type="visual_odometry" name="visual_odometry" output="screen"/>
+</launch>

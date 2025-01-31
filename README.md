@@ -1,4 +1,4 @@
-# **Camera Driver package**
+# **camera_driver package**
 
 ___
 
@@ -10,17 +10,55 @@ ___
 
 ___
 
+## Overview
+
+The `camera_driver` node provides an interface between [ZED SDK API](https://www.stereolabs.com/docs) and SGT-DV ROS network, producing up to 3 types of data: 
+  1. The camera picture is used as input for [Darknet neural network](https://github.com/AlexeyAB/darknet), trained for detection and classification of cones specified by FS Driverless rules (currently trained on [FSOCO dataset](https://www.fsoco-dataset.com/)), employing the YOLO(v4) method.
+  2. Based on visual odometry data provided by the SDK, camera pose is published.
+  3. Data from built-in IMU sensor is published.
+
+### ROS Interface
+
+**Published topics:**
+* `/camera/cones` [[`sgtdv_msgs/ConeStampedArr`](../sgtdv_msgs/msg/ConeStampedArr.msg)] : detected cones position in `camera_left` frame and color
+* `/camera/pose` [[`geometry_msgs/PoseWithCovarianceStamped`](/opt/ros/noetic/share/geometry_msgs/msg/PoseWithCovarianceStamped.msg)] : position and rotation of `base_link` frame (transformed from `camera_left` frame) in `odom` frame
+* `/camera/imu` [[`sensor_msgs/Imu`](/opt/ros/noetic/share/sensor_msgs/msg/Imu.msg)] : data from built-in IMU sensor in `camera_center` frame  
+
+*If `SGT_DEBUG_STATE` macro enabled*
+* `/camera_driver/debug_state` [[`sgtdv_msgs/DebugState](../sgtdv_msgs/msg/DebugState.msg)] : node lifecycle information (active/inactive, number of detected cones)
+
+**Advertised services**
+* `/camera/reset_odometry` [[`std_srvs/Empty`](/opt/ros/noetic/share/std_srvs/srv/Empty.srv)] : resets the positional tracking matrix on callback
+
+**Parameters**
+* `/obj_names_filename` : file name with stored names of classes
+* `/cfg_filename` : NN configuration file name
+* `/weights_filename` : weights configuration file name
+* `/output_video_filename` : filename of recorded MP4 video
+* `/output_svo_filename` : filename of recorded SVO video
+* `/input_stream` : define input source - "zed" or relative path to a SVO video
+* `/publish_carstate` : publish camera pose (left eye by default) from ZED visual odometry in `odom` frame to `/camera_pose` topic
+* `/camera_show` : show live camera stream with bounding boxes in window - not possible through SSH
+* `/console_show` : print out cone detection results into console
+* `/record_video` : record MP4 video from camera stream
+* `/record_video_svo` : record SVO video from camera stream - can be used as offline camera input
+
+
 ### Related packages
-* `visual_odometry`
+* [`fusion`](../fusion/README.md) - `/camera/cones` subscriber
+* [`robot_localization`](../robot_localization/README.md) : `/camera/pose` and `/camera/imu` subscriber
+* [`odometry_interface`](../odometry_interface/README.md) : `/camera/reset_odometry` caller and (optional) `/camera/pose` subscriber
+* [`visual_odometry`](../visual_odometry/README.md) : (optional, alternating `robot_localization`) `/camera/pose` subscriber
+
+## Installation
 
 ### Requirements
 
-* [**CUDA 10.0**](https://developer.nvidia.com/embedded/jetpack)
+* [**CUDA**](https://developer.nvidia.com/embedded/jetpack)
 * [**OpenCV >= 4.0.1**](https://developer.nvidia.com/embedded/jetpack)
-* [**ZED SDK 3.X**](https://www.stereolabs.com/developers/release/)
+* [**ZED SDK**](https://www.stereolabs.com/developers/release/) (pick correct version according to the current hardware configuration)
 * [**Darknet**](https://github.com/AlexeyAB/darknet)  
   
-
 ### Darknet compilation
 * Set in `Makefile`:
   * GPU=1
@@ -30,48 +68,57 @@ ___
 * Then compile with `$ make`
 * Copy generated `libdarknet.so` file into `camera_driver/include`
 
-
 ## Compilation
 
-Configuration files for NN, generated *.weights and *.svo files are stored in folder [**Darknet_cone_detection**](https://drive.google.com/drive/folders/144MJlPqqrMii9dVJtaWv_vCwrJNkGFed?usp=sharing) on G-Drive. Copy this folder into `src/camera_driver/`. If any file is changed, it needs to be updated on G-Drive. New weights also lie on [**G-Drive**](https://drive.google.com/drive/u/1/folders/1LW0ZmNBE1v93NTcOAzq3gNRCSCzKWU6H).
+Configuration files for NN, generated `*.weights` and `*.svo` files are stored in folder [**Darknet_cone_detection**](./Darknet_cone_detection/). If a new configuration is trained, it has to be added there.
 
-The following packages have to be built at first:
-  - `sgtdv_msgs`
-
-In folder `ros_implementation/src/` run:
+* standalone
 ```sh
 $ catkin build camera_driver -DCMAKE_BUILD_TYPE=Release
 ```
-
-## Launch
+* RC car setup
 ```sh
-$ source ros_implementation/devel/setup.bash
+$ source ${SGT_ROOT}/scripts/build_rc.sh
+```
+
+### Compilation configuration
+* [`SGT_Macros.h`](../SGT_Macros.h) :
+  - `SGT_DEBUG_STATE` : publish node lifecycle information
+  
+## Launch
+* standalone
+```sh
 $ roslaunch camera_driver camera_driver.launch
 ```
-
-### Launch configuration
-* `param/camera_driver.yaml`
-  - `obj_names_filename` : file name with stored names of classes
-  - `cfg_filename` : NN configuration file name
-  - `weights_filename` : weights configuration file name
-  - `output_video_filename` : filename of recorded MP4 video
-  - `output_svo_filename` : filename of recorded SVO video
-  - `input_stream` : define input source - "zed" or relative path to a SVO video
-  - `publish_carstate` : publish camera pose (left eye by default) from ZED visual odometry in `odom` frame to `/camera_pose` topic
-  - `camera_show` : show live camera stream with bounding boxes in window - not possible through SSH
-  - `console_show` : print out cone detection results into console
-  - `record_video` : record MP4 video from camera stream
-  - `record_video_svo` : record SVO video from camera stream - can be used as offline camera input
-
-### RViz visualization
-In new terminal run:
+* perception setup
 ```sh
-$ source ros_implementation/devel/setup.bash
-$ roslaunch data_visualization data_visualization_camera.launch
+$ roslaunch fusion fusion_rc.launch
+```
+* camera pose tracking
+```sh
+$ roslaunch camera_driver camera_pose_tracking.launch
 ```
 
- ## Visual odometry
- Node `visual_odometry` subscribes `/camera/pose` topic from `camera_driver` node and publishes transformation from `base_link` to `odom` frame on general `/tf` topic.
+
+### Launch configuration
+* [`camera_driver.yaml`](./params/camera_driver.yaml)
+
+### RViz visualization
+* standalone
+```sh
+$ roslaunch data_visualization data_visualization_camera.launch
+```
+* RC car setup
+```sh
+$ roslaunch data_visualization data_visualization_rc.launch
+```
+
+## Diagrams and flowcharts
+
+<figcaption align = "center">Camera Cone Detection flowchart</figcaption>
+<p align="center">
+    <img src="./doc/SW flowcharts-Camera Cone Detection.svg" height="300">
+</p>
 
 ## Benchmarking different YOLO configurations
 It is claimed by Stephane Charette that yolov4-tiny is both faster to train and more accurate, has faster inference time than yolov7-tiny. Though we were unable to train yolov4-tiny to be more precise than yolov7-tiny. It may be caused by the overall complexity of FSOCO dataset. To get better runtime performance (inference time) we chose to decrease network size. In case there are any questions, please consult Darknet [FAQ](https://www.ccoderun.ca/programming/darknet_faq/#fps). All of the tests were run on Jetson AGX Xavier. yolov4-tiny-obj turned out to be even slower than FSOCO yolov4-tiny. yolov4-tiny-3l-obj had visible problems with detection seen on visualization. Never use those network configurations.

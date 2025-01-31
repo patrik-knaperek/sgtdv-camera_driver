@@ -7,6 +7,8 @@
 
 CameraDriver::CameraDriver(ros::NodeHandle& handle, const CameraConeDetection::Params& nn_params)
   : camera_cone_detection_(nn_params)
+
+  /* ROS Interface initialization */
   , cone_pub_(handle.advertise<sgtdv_msgs::ConeStampedArr>("camera/cones", 1))
   , carstate_pub_(handle.advertise<geometry_msgs::PoseWithCovarianceStamped>("camera/pose", 1))
   , reset_odom_server_(handle.advertiseService("camera/reset_odometry", &CameraDriver::resetOdomCallback, this))
