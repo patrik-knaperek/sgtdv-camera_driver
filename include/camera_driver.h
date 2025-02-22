@@ -67,6 +67,8 @@ class CameraDriver
 public:
   struct Params
   {
+    std::string cone_detection_frame;
+    std::string base_frame;
     std::string names_file;
     std::string out_video_file;
     std::string out_svo_file;
@@ -114,6 +116,7 @@ private:
   sl::MODEL cam_model_;
   sl::Pose camera_pose_;
   sl::SensorsData sensors_data_;
+  sl::Translation base_to_camera_left_tf_;
 
   cv::VideoWriter output_video_;
 

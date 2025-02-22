@@ -6,6 +6,9 @@
 /* ROS */
 #include <geometry_msgs/PoseWithCovarianceStamped.h>
 #include <sensor_msgs/Imu.h>
+#include <tf/transform_listener.h>
+#include <tf2_ros/static_transform_broadcaster.h>
+#include <geometry_msgs/TransformStamped.h>
 
 /* Header */
 #include "camera_driver.h"
@@ -44,6 +47,9 @@ void CameraDriver::loadParams(const ros::NodeHandle& nh)
 {
   const auto path_to_package = ros::package::getPath("camera_driver");
   std::string filename_temp;
+
+  Utils::loadParam(nh, "/camera/frame_id", std::string("camera_left"), &params_.cone_detection_frame);
+  Utils::loadParam(nh, "/base_frame_id", std::string("camera_center"), &params_.base_frame);
   
   Utils::loadParam(nh, "/obj_names_filename", &filename_temp);
   params_.names_file = path_to_package + filename_temp;
@@ -115,12 +121,24 @@ void CameraDriver::initialize(void)
     return;
   }
 
-  // Check camera model
+  /* Check camera model */
   cam_model_ = zed_.getCameraInformation().camera_model;
   ROS_INFO_STREAM("camera model: " << cam_model_);
 
   /* set additional camera settings */
   zed_.setCameraSettings(sl::VIDEO_SETTINGS::WHITEBALANCE_AUTO, 1);
+
+  /* Get distance from center of the camera to the left eye and publish static TF */
+  static tf2_ros::StaticTransformBroadcaster static_broadcaster;
+  geometry_msgs::TransformStamped static_transform_stamped;
+   
+  static_transform_stamped.header.stamp = ros::Time::now();
+  static_transform_stamped.header.frame_id = "camera_center";
+  static_transform_stamped.child_frame_id = "camera_left";
+  static_transform_stamped.transform.translation.y 
+    = zed.getCameraInformation().camera_configuration.calibration_parameters.T.x * 0.5f;
+  static_transform_stamped.transform.rotation.w = 1.0;
+  static_broadcaster.sendTransform(static_transform_stamped);
 
   /* enable SVO output recording */
   if(params_.record_video_svo)
@@ -135,9 +153,22 @@ void CameraDriver::initialize(void)
 
   if(params_.publish_carstate)
   {
-    // Set parameters for Positional Tracking
+    /* Set parameters for Positional Tracking */
     sl::PositionalTrackingParameters tracking_parameters;
-    tracking_parameters.enable_area_memory = false; //disable to use pose_covariance
+    // tracking_parameters.enable_area_memory = false; //disable to use pose_covariance
+
+    /* Get initial position of the camera in the pose reference frame */
+    tf::TransformListener listener;
+    geometry_msgs::PointStamped in;
+    in.header.stamp = ros::Time::now();
+    in.header.frame_id = "camera_left";
+    sl::Transform initial_pose;
+
+    const auto out = Utils::transformCoords(listener, params_.base_frame, in);
+    initial_pose.setTranslation(sl::Translation(out.point.x, out.point.y, out.point.z));
+    tracking_parameters.initial_world_transform = initial_pose;
+    base_to_camera_left_tf_ = sl::Translation(-out.point.x, -out.point.y, -out.point.z);
+
     zed_.enablePositionalTracking(tracking_parameters);
   }
 
@@ -182,7 +213,7 @@ void CameraDriver::update()
     { /* Fill up camera/cones topic message */
       sgtdv_msgs::ConeStampedArr coneArr;
       sgtdv_msgs::ConeStamped cone;
-      cone.coords.header.frame_id = "camera_left";
+      cone.coords.header.frame_id = params_.cone_detection_frame;
       cone.coords.header.stamp = capture_time;
   
       int i_n = 0;
@@ -240,9 +271,11 @@ void CameraDriver::update()
       car_state.header.stamp = capture_time;
       car_state.header.frame_id = "odom";
 
-      car_state.pose.pose.position.x = camera_pose_.getTranslation().x;
-      car_state.pose.pose.position.y = camera_pose_.getTranslation().y;
-      car_state.pose.pose.position.z = camera_pose_.getTranslation().z;
+      const auto base_position = camera_pose_.getTranslation() * base_to_camera_left_tf_;
+      
+      car_state.pose.pose.position.x = base_position.x;
+      car_state.pose.pose.position.y = base_position.y;
+      car_state.pose.pose.position.z = base_position.z;
 
       car_state.pose.pose.orientation.x = camera_pose_.getOrientation().x;
       car_state.pose.pose.orientation.y = camera_pose_.getOrientation().y;
@@ -261,8 +294,8 @@ void CameraDriver::update()
     if (cam_model_ >= sl::MODEL::ZED2) 
     {
       sensor_msgs::Imu imu_data;
-      imu_data.header.stamp = capture_time;
-      imu_data.header.frame_id = "camera_center";
+      imu_data.header.stamp = ros::Time::now();
+      imu_data.header.frame_id = "camera_left";
       
       if (zed_.getSensorsData(sensors_data_, sl::TIME_REFERENCE::CURRENT) == sl::ERROR_CODE::SUCCESS)
       {

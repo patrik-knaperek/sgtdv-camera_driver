@@ -22,7 +22,7 @@ The `camera_driver` node provides an interface between [ZED SDK API](https://www
 **Published topics:**
 * `/camera/cones` [[`sgtdv_msgs/ConeStampedArr`](../sgtdv_msgs/msg/ConeStampedArr.msg)] : detected cones position in `camera_left` frame and color
 * `/camera/pose` [[`geometry_msgs/PoseWithCovarianceStamped`](/opt/ros/noetic/share/geometry_msgs/msg/PoseWithCovarianceStamped.msg)] : position and rotation of `base_link` frame (transformed from `camera_left` frame) in `odom` frame
-* `/camera/imu` [[`sensor_msgs/Imu`](/opt/ros/noetic/share/sensor_msgs/msg/Imu.msg)] : data from built-in IMU sensor in `camera_center` frame  
+* `/camera/imu` [[`sensor_msgs/Imu`](/opt/ros/noetic/share/sensor_msgs/msg/Imu.msg)] : data from built-in IMU sensor in `camera_left` frame  
 
 *If `SGT_DEBUG_STATE` macro enabled*
 * `/camera_driver/debug_state` [[`sgtdv_msgs/DebugState](../sgtdv_msgs/msg/DebugState.msg)] : node lifecycle information (active/inactive, number of detected cones)
